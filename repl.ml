@@ -21,4 +21,4 @@ let rec loop() =
             printf "regular string: %s\n" input_str
     done
 
-let _ = loop ()
+(*let _ = loop ()*)
