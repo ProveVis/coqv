@@ -5,7 +5,7 @@ repl: repl.ml
 	ocamlc -o repl str.cma repl.ml
 
 comm: communicate.ml
-	ocamlc -o comm unix.cma communicate.ml
+	ocamlfind ocamlc -thread -o comm unix.cma threads.cma -package async -linkpkg -g communicate.ml
 
 clean:
 	rm -f *.cm[ioxa]

@@ -1,4 +1,15 @@
 open Printf
+(*open Async.Std*)
+
+let running = ref true
+
+
+let worker cin =     
+    let buffer = Bytes.create 4096 in
+    while !running do
+        let len = input cin buffer 0 4096 in
+        printf "RECEIVED: %s\n" (Bytes.sub_string buffer 0 len)
+    done
 
 let _ = 
     let master2slave_in, master2slave_out = Unix.pipe () 
@@ -14,19 +25,12 @@ let _ =
         Unix.close master2slave_in;
         Unix.close slave2master_out;
         (*starting reading from repl*)
-        let buffer = Bytes.create 4096 in
-        let running = ref true in
+        (*In_thread.run (fun () -> worker cin);*)
+        let t = Thread.create worker cin in
         while !running do
             let input_str = read_line () in
             output_string cout (input_str^"\n");
-            flush cout;
-            let len = input cin buffer 0 4096 in
-            printf "RECEIVED: %s\n" (Bytes.sub_string buffer 0 len)
+            flush cout
         done
-
-(*
-        let input_str = read_line () in
-        output_string cout (input_str^"\n");
-        let input_from_pipe = input_char cin in
-        printf "received message: %c" input_from_pipe*)
+        
     end 
