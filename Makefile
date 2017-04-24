@@ -1,5 +1,5 @@
 all: repl.ml
-	ocamlfind ocamlc -o coqv str.cma unix.cma repl.ml communicate.ml
+	ocamlfind ocamlc -thread -o coqv str.cma unix.cma threads.cma repl.ml
 
 repl: repl.ml
 	ocamlc -o repl str.cma repl.ml
