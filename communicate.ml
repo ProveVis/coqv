@@ -3,12 +3,16 @@ open Printf
 
 let running = ref true
 
-
 let worker cin =     
     let buffer = Bytes.create 4096 in
     while !running do
         let len = input cin buffer 0 4096 in
-        printf "RECEIVED: %s\n" (Bytes.sub_string buffer 0 len)
+        if len = 0 then
+            running := false
+        else begin
+            printf "RECEIVED: %s\n" (Bytes.sub_string buffer 0 len);
+            flush stdout
+        end
     done
 
 let _ = 
