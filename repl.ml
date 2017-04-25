@@ -57,4 +57,4 @@ let rec loop args =
         flush stdout
     done*)
 
-let _ = loop ["-async-proofs";"on";"-ideslave"; "-toploop";"coqv"; "-main-channel";"stdfds"; "-control-channel";"stdfds"]
+let _ = loop ["-ideslave"]
