@@ -1,0 +1,7 @@
+*.cm[ioxa]
+*.o
+*.mli
+coqv
+repl
+comm
+*.eventlog
