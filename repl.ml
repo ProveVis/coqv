@@ -14,7 +14,7 @@ let worker cin =
         if len = 0 then
             running := false
         else begin
-            printf "RECEIVED: %s\n" (Bytes.sub_string buffer 0 len);
+            printf "%s" (Bytes.sub_string buffer 0 len);
             flush stdout
         end
     done
@@ -57,4 +57,4 @@ let rec loop args =
         flush stdout
     done*)
 
-let _ = loop ["-ideslave"]
+let _ = loop ["-ideslave";"-xml"]
