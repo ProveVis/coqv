@@ -6,6 +6,10 @@ let out_chan = stdout
 let running = ref true
 
 let command_re = Str.regexp ":[-_A-Za-z0-9]+"
+let ignored_re = Str.regexp "Coq < "
+
+let read_write_condition = Condition.create ()
+let read_write_mutex = Mutex.create ()
 
 let worker cin =     
     let buffer = Bytes.create 4096 in
@@ -14,9 +18,11 @@ let worker cin =
         if len = 0 then
             running := false
         else begin
-            printf "%s" (Bytes.sub_string buffer 0 len);
+            let output_str = Bytes.sub_string buffer 0 len in
+            printf "%s" (Str.global_replace ignored_re "" output_str);
             flush stdout
-        end
+        end;
+        Condition.signal read_write_condition
     done
 
 let rec loop args = 
@@ -35,26 +41,20 @@ let rec loop args =
         (*starting reading from repl*)
         (*In_thread.run (fun () -> worker cin);*)
         ignore(Thread.create worker cin);
+        (*input header information*)
+        let buffer = Bytes.create 1024 in
+        let len = input cin buffer 0 1024 in
+        let header = Bytes.sub_string buffer 0 len in
+        printf "Using coqtop version %s" (Str.global_replace (Str.regexp "Welcome to Coq ") "" header);
         while !running do
+            Mutex.lock read_write_mutex;
+            Condition.wait read_write_condition read_write_mutex;
+            Mutex.unlock read_write_mutex;
             print_string "coqv> ";
             let input_str = read_line () in
             output_string cout (input_str^"\n");
             flush cout
         done
-        
     end
-    (*;while !running do
-        print_string "my_coqv> ";
-        let input_str = read_line () in
-        if Str.string_match command_re input_str 0 then
-            let cmd = Str.split (Str.regexp ":") input_str in
-            if List.hd cmd = "exit" then 
-                running := false
-            else 
-                printf "command found: %s\n" (List.hd cmd)
-        else
-            printf "regular string: %s\n" input_str;
-        flush stdout
-    done*)
 
-let _ = loop ["-ideslave";"-xml"]
+let _ = loop ["-ideslave"]
