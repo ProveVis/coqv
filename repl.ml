@@ -34,7 +34,7 @@ let rec loop args =
     if pid = 0 then 
         printf "create process error"
     else begin
-        printf "created process %d\n" pid;
+        (*printf "created process %d\n" pid;*)
         let cin, cout = Unix.in_channel_of_descr slave2master_in, Unix.out_channel_of_descr master2slave_out in
         Unix.close master2slave_in;
         Unix.close slave2master_out;
@@ -45,7 +45,7 @@ let rec loop args =
         let buffer = Bytes.create 1024 in
         let len = input cin buffer 0 1024 in
         let header = Bytes.sub_string buffer 0 len in
-        printf "Using coqtop version %s" (Str.global_replace (Str.regexp "Welcome to Coq ") "" header);
+        printf "\t\tCoqV version 0.1 [coqtop version %s]\n\n" (Str.global_replace (Str.regexp "\n") "" (Str.global_replace (Str.regexp "Welcome to Coq ") "" header));
         while !running do
             Mutex.lock read_write_mutex;
             Condition.wait read_write_condition read_write_mutex;
