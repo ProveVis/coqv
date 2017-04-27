@@ -15,5 +15,23 @@ Each command for CoqV is of the following form:
         :<command-name> [<args>]
 
 `<command-name>` specifies the name of the command, and `<args>` specifies the arguments of the command, which are optional. 
-For instance, command `:highlight-node n1 red` indicates that we want to highlight a node in the proof tree with color red.
+For instance, command `:select-node n1` indicates that we want print the information related to node `n1`, or visualize node `n1` in VMDV.
+
+**Basic commands:**
+
+1. Select specific nodes.
+
+        :select-node <node-id> <node-id> <node-id> ...
+
+2. Show label of specific nodes.
+
+        :show-label <node-id> <node-id> <node-id> ...
+
+3. Hide specific subtrees.
+
+        :hide-subproof <node-id> <node-id> <node-id> ...
+
+4. Show the children of specific nodes.
+
+        :show-children <node-id> <node-id> <node-id> ...
 
