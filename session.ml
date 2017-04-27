@@ -9,6 +9,7 @@ type node = {
     id: string;
     label: string;
     state: node_state;
+    visible: bool;
 }
 
 let str_node_state ns = 
@@ -19,9 +20,12 @@ let str_node_state ns =
     | To_be_choosed -> "To_be_choosed"
     | Chosen -> "Chosen"
 
+let str_node node = 
+    "Node "^node.id^"("^(str_node_state node.state)^"): "^node.label;
+
 type proof_tree = {
     nodes: (string, node) Hashtbl.t; 
-    edges: (string, string) Hashtbl.t
+    edges: (string, string list) Hashtbl.t
 }
 
 type session = {
@@ -30,3 +34,5 @@ type session = {
     mutable state: proof_state;
     proof_tree: proof_tree;
 }
+
+type session_tbl = (string, session) Hashtbl.t
