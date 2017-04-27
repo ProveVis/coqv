@@ -1,5 +1,5 @@
 all: repl.ml
-	ocamlfind ocamlc -thread -o coqv str.cma unix.cma threads.cma repl.ml
+	ocamlc -thread -o coqv.exe str.cma unix.cma threads.cma repl.ml
 
 # repl: repl.ml
 # 	ocamlc -o repl str.cma repl.ml

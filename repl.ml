@@ -30,7 +30,8 @@ let rec loop args =
     and slave2master_in, slave2master_out = Unix.pipe () in
     Unix.set_close_on_exec master2slave_out;
     Unix.set_close_on_exec slave2master_in;
-    let pid = Unix.create_process "/usr/bin/coqtop" (Array.of_list args)  master2slave_in slave2master_out slave2master_out in
+    (*let pid = Unix.create_process "/usr/bin/coqtop" (Array.of_list args)  master2slave_in slave2master_out slave2master_out in*)
+    let pid = Unix.create_process "coqtop" (Array.of_list args)  master2slave_in slave2master_out slave2master_out in
     if pid = 0 then 
         printf "create process error"
     else begin

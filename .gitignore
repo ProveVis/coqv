@@ -2,6 +2,7 @@
 *.o
 *.mli
 coqv
+coqv.exe
 repl
 comm
 *.eventlog
