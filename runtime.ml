@@ -64,19 +64,52 @@ let show_label node_id_list =
     
 
 let hide_subproof node_id_list = 
-    let find_node_by_id nid = 
+    match !current_session_id with
+    | None -> raise No_session_id
+    | Some sid -> begin
         try
-            Hashtbl.find nid
-        with 
-            Not_found -> raise (Node_not_found nid) in
-    List.iter 
-        (fun nid ->
-            Hashtbl.find 
-        ) 
-        node_id_list
-    let node_list = ref [] in
-    node_list := List.map (fun nid -> find_node_by_id nid) node_id_list;
+            let session = Hashtbl.find sessions sid in
+            let find_node_by_id nid = 
+                try
+                    Hashtbl.find session.proof_tree.nodes nid
+                with 
+                    Not_found -> raise (Node_not_found nid) in
+            List.iter 
+                (fun nid ->
+                    let subnode_ids = Hashtbl.find session.proof_tree.edges nid in
+                    List.iter 
+                        (fun subnid -> 
+                            let subnode = Hashtbl.find session.proof_tree.nodes subnid in
+                            subnode.visible <- false
+                        ) subnode_ids;
+                    printf "Subnodes of %s are hidden\n" nid
+                ) node_id_list;
+            flush stdout
+        with Not_found -> raise (Session_not_found sid)
+    end
 
+let show_children node_id_list = 
+    match !current_session_id with
+    | None -> raise No_session_id
+    | Some sid -> begin
+        try
+            let session = Hashtbl.find sessions sid in
+            let find_node_by_id nid = 
+                try
+                    Hashtbl.find session.proof_tree.nodes nid
+                with 
+                    Not_found -> raise (Node_not_found nid) in
+            List.iter 
+                (fun nid ->
+                    let subnode_ids = Hashtbl.find session.proof_tree.edges nid in
+                    List.iter 
+                        (fun subnid -> 
+                            printf "%s\n" subnid
+                        ) subnode_ids
+                ) node_id_list;
+            flush stdout
+        with Not_found -> raise (Session_not_found sid)
+    end   
 
 
 
