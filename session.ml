@@ -8,8 +8,7 @@ type node_state = Not_proved | Proved | Assumed | To_be_choosed | Chosen
 type node = {
     id: string;
     label: string;
-    state: node_state;
-    visible: bool;
+    mutable state: node_state;
 }
 
 let str_node_state ns = 

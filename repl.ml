@@ -47,14 +47,20 @@ let rec loop args =
         let len = input cin buffer 0 1024 in
         let header = Bytes.sub_string buffer 0 len in
         printf "\t\tCoqV version 0.1 [coqtop version %s]\n\n" (Str.global_replace (Str.regexp "\n") "" (Str.global_replace (Str.regexp "Welcome to Coq ") "" header));
+        
         while !running do
             Mutex.lock read_write_mutex;
             Condition.wait read_write_condition read_write_mutex;
             Mutex.unlock read_write_mutex;
             print_string "coqv> ";
             let input_str = read_line () in
-            output_string cout (input_str^"\n");
-            flush cout
+            if String.sub input_str 0 1 = ":" then begin
+                printf "command name: %s\n" (String.sub input_str 1 (String.length input_str - 1));
+                flush stdout
+            end else begin
+                output_string cout (input_str^"\n");
+                flush cout
+            end
         done
     end
 
