@@ -58,8 +58,10 @@ let rec loop args =
             let input_str = read_line () in
             if String.sub input_str 0 1 = ":" then begin
                 running_coqv := true;
-                printf "command name: %s\n" (String.sub input_str 1 (String.length input_str - 1));
-                flush stdout
+                let cmd = (String.sub input_str 1 (String.length input_str - 1)) in
+                (*printf "command name: %s\n" cmd;
+                flush stdout*)
+                Script.interpret cmd
             end else begin
                 running_coqv := false;
                 output_string cout (input_str^"\n");

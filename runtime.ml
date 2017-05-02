@@ -1,16 +1,16 @@
-open Session
+open Types
 open Printf
 
 let sessions = Hashtbl.create 10
 let current_session_id = ref None
 
 exception Node_not_found of string
-exception No_session_id
 exception Session_not_found of string
+exception Not_in_session
 
 let select_node nid = 
     match !current_session_id with
-    | None -> raise No_session_id
+    | None -> raise Not_in_session
     | Some sid -> begin
         try
             let session = Hashtbl.find sessions sid in
@@ -22,10 +22,13 @@ let select_node nid =
     end
 
 let children node = 
-    let id = node.id in
-    let session = Hashtbl.find sessions (!current_session_id) in
-    let ids = Hashtbl.find session.proof_tree.edges id in
-    List.map (fun id -> Hashtbl.find session.proof_tree.nodes id) ids
+    match !current_session_id with
+    | None -> raise Not_in_session
+    | Some sid -> 
+        let id = node.id in
+        let session = Hashtbl.find sessions sid in
+        let ids = Hashtbl.find session.proof_tree.edges id in
+        List.map (fun id -> Hashtbl.find session.proof_tree.nodes id) ids
 
 let hide node = 
     printf "hiding node %s\n" node.id; 

@@ -10,7 +10,7 @@ type message =
 let protocol_version_no = "20170502"
 let sending_queue = Queue.create ()
 let sending_mutex = Mutex.create ()
-let sending_conditional = Conditional.create ()
+let sending_conditional = Condition.create ()
 let log_file = "log"
 (*let receiving_queue = Queue.create ()*)
 
@@ -31,7 +31,7 @@ let handshake cin cout =
 let wait_to_send msg = 
     Mutex.lock sending_mutex;
     Queue.push msg sending_queue;
-    Conditional.signal sending_conditional;
+    Condition.signal sending_conditional;
     Mutex.unlock sending_mutex
 
 
@@ -52,13 +52,13 @@ let json_of_msg (msg:message) =
             ("node_label", `String n.label);
             ("node_state", `String (str_node_state n.state))
         ]
-    | New_edge e -> 
+    | New_edge (from_id, to_id) -> 
         `Assoc [
             ("protocol_version", `String protocol_version_no);
             ("type", `Int 0);
             ("content", `String "New_edge");
-            ("from_id", `String (fst e));
-            ("to_id", `String (snd e))
+            ("from_id", `String from_id);
+            ("to_id", `String to_id)
         ]
 
 let sending cout =
@@ -67,7 +67,7 @@ let sending cout =
     while !running do
         if Queue.is_empty sending_queue then begin
             Mutex.lock sending_mutex;
-            Conditional.wait sending_conditional;
+            Condition.wait sending_conditional sending_mutex;
             Mutex.unlock sending_mutex
         end else begin
             let msg = ref Terminate in
@@ -80,10 +80,10 @@ let sending cout =
                 | _ -> ()
             end;
             let json_msg = json_of_msg !msg in
-            Yojson.to_channel cout json_msg;
+            Yojson.Basic.to_channel cout json_msg;
             flush cout;
             output_string log_out "JSON data sent:\n";
-            output_string log_out (Yojson.to_string json_msg)
+            output_string log_out (Yojson.Basic.to_string json_msg);
             output_string log_out "\n";
             flush log_out
         end
@@ -93,9 +93,9 @@ let receiving cin =
     let running = ref true in
     let log_out = open_out log_file in
     while !running do
-        let msg = Yojson.from_channel cin in
+        let msg = Yojson.Basic.from_channel cin in
         output_string log_out "JSON data received:\n";
-        output_string log_out (Yojson.to_string msg);
+        output_string log_out (Yojson.Basic.to_string msg);
         output_string log_out "\n";
         flush log_out
     done
