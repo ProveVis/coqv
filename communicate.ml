@@ -2,7 +2,6 @@ open Printf
 open Types
 open Yojson
 
-
 type message = 
     | New_node of node
     | New_edge of string * string

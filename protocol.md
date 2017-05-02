@@ -18,11 +18,25 @@ Three parts of a communication protocol need to be specified.
     - 1: response 
 
 ## Application data
-(*encoding of the proof tree, to be determined*)
+1. A node is encoded as a tuple with three subfields: `id`, `label`, and `state`:
+    - `id`: a string value specifies the id of a node;
+    - `label`: a string value that specifies the formula to be proved at the moment;
+    - `state`: a string value that specifies the state of the proved formula, for instance: `Proved`, `Not_proved`, `Assumed`, etc.
+2. An edge is encoded as a pair of string values, which are the `id`s of the corresponding two nodes.
 
 ## Data format
-1. XML
-2. JSON
+1. JSON
+    The format of JSON data in coqv is a set of Key/Value pairs:
+    - Key: `protocol_version`, Value: a string value;
+    - Key: `type`, Value: an integer value, where `0` means a request, and `1` means a response;
+    - Key: `status`, Value: an integer value;
+    - Key: `content`, Value: a string value;
+    - Key: `node_id`, Value: a string value;
+    - Key: `node_label`, Value: a string value;
+    - Key: `node_state`, Value: a string value;
+    - Key: `from_id`, Value: a string value;
+    - Key: `to_id`, Value: a string value.
 
-## An illustrative example
+2. XML
+
 (*to be determined*)
