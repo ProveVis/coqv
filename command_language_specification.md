@@ -19,19 +19,19 @@ For instance, command `:select-node n1` indicates that we want print the informa
 
 **Basic commands:**
 
-1. Select specific nodes.
+1. Select a specific node.
 
-        :select-node <node-id> <node-id> <node-id> ...
+        :select-node <node-id>
 
-2. Show label of specific nodes.
+2. Show label of a specific node.
 
-        :show-label <node-id> <node-id> <node-id> ...
+        :show-label <node-id>
 
-3. Hide specific subtrees.
+3. Hide a specific subtree.
 
-        :hide-subproof <node-id> <node-id> <node-id> ...
+        :hide-subproof <node-id>
 
-4. Show the children of specific nodes.
+4. Show the children of a specific node.
 
-        :show-children <node-id> <node-id> <node-id> ...
+        :show-children <node-id>
 

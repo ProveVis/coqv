@@ -1,15 +1,4 @@
-
-type kind = Lemma | Proposition | Theorem | Axiom
-
-type proof_state = Start | Processing | Complete | Aborted | Assumed
-
-type node_state = Not_proved | Proved | Assumed | To_be_choosed | Chosen
-
-type node = {
-    id: string;
-    label: string;
-    mutable state: node_state;
-}
+open Types
 
 let str_node_state ns = 
     match ns with
@@ -29,7 +18,7 @@ type proof_tree = {
 
 type session = {
     name: string;
-    kind: kind;
+    kind: proof_kind;
     mutable state: proof_state;
     proof_tree: proof_tree;
 }
