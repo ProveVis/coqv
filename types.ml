@@ -31,6 +31,9 @@ type node = {
     mutable state: node_state;
 }
 
+let str_node n = 
+    "Node "^n.id^"("^(str_node_state n.state)^"): "^n.label
+
 type proof_tree = {
     nodes: (string, node) Hashtbl.t; 
     edges: (string, string list) Hashtbl.t
@@ -44,3 +47,9 @@ type session = {
 }
 
 type session_tbl = (string, session) Hashtbl.t
+(********************************************************************)
+
+type coq_input = 
+    | Start_session of proof_kind * string * string
+    | Proof 
+    | Qed
