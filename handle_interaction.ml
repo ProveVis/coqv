@@ -4,6 +4,9 @@ open Types
 open Lexing
 (*open Parser*)
 
+(*type request_mode =
+    | *)
+
 let interpret_cmd cmd = 
     printf "Interpreting command: %s\n" cmd;
     flush stdout
@@ -14,5 +17,6 @@ let handle_input input_str cout =
 
 
 let handle_feedback feedback = 
+    printf "got feedback message length: %d\n" (String.length feedback);
     printf "%s" (Str.global_replace (ignored_re ()) "" feedback);
     flush stdout

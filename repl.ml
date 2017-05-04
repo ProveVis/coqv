@@ -56,7 +56,7 @@ let rec loop args =
                 Mutex.lock read_write_mutex;
                 Condition.wait read_write_condition read_write_mutex;
                 Mutex.unlock read_write_mutex;
-                Thread.delay 0.01
+                Thread.delay 0.01 (*waiting for the last input from coqtop to complete*)
             end;
             print_string "coqv> ";
             let input_str = read_line () in
@@ -77,4 +77,4 @@ let rec loop args =
         done
     end
 
-let _ = loop ["-ideslave"]
+let _ = loop ["-ideslave"; "-xml"]
