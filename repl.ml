@@ -1,12 +1,13 @@
 open Printf
 open Str
+open Runtime
+open Handle_interaction
 
 let in_chan = stdin
 let out_chan = stdout
 let running = ref true
 
 let command_re = Str.regexp ":[-_A-Za-z0-9]+"
-let ignored_re = Str.regexp "Coq < "
 
 let read_write_condition = Condition.create ()
 let read_write_mutex = Mutex.create ()
@@ -19,8 +20,10 @@ let worker cin =
             running := false
         else begin
             let output_str = Bytes.sub_string buffer 0 len in
-            printf "%s" (Str.global_replace ignored_re "" output_str);
-            flush stdout
+            (*printf "%s" (Str.global_replace (ignored_re ()) "" output_str);
+            flush stdout*)
+            if(len <> 0) then
+                handle_feedback output_str
         end;
         Condition.signal read_write_condition
     done
@@ -52,21 +55,25 @@ let rec loop args =
             if not !running_coqv then begin
                 Mutex.lock read_write_mutex;
                 Condition.wait read_write_condition read_write_mutex;
-                Mutex.unlock read_write_mutex
+                Mutex.unlock read_write_mutex;
+                Thread.delay 0.01
             end;
             print_string "coqv> ";
             let input_str = read_line () in
-            if String.sub input_str 0 1 = ":" then begin
-                running_coqv := true;
-                let cmd = (String.sub input_str 1 (String.length input_str - 1)) in
-                (*printf "command name: %s\n" cmd;
-                flush stdout*)
-                Script.interpret cmd
-            end else begin
-                running_coqv := false;
-                output_string cout (input_str^"\n");
-                flush cout
-            end
+            (*printf "input length: %d\n" (String.length input_str);*)
+            if (String.length input_str > 0) then begin
+                if String.sub input_str 0 1 = ":" then begin
+                    running_coqv := true;
+                    let cmd = (String.sub input_str 1 (String.length input_str - 1)) in
+                    (*printf "command name: %s\n" cmd;
+                    flush stdout*)
+                    interpret_cmd cmd
+                end else begin
+                    running_coqv := false;
+                    handle_input input_str cout
+                end
+            end else 
+                running_coqv := true
         done
     end
 

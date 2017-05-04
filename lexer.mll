@@ -10,5 +10,20 @@ rule command_token =
     | id as s   {Id s}
     | int as s  {Int (int_of_string s)}
 
-and  
+and coqtop_token = 
+    | "."           {Dot}
+    | "============================"    {Gamma}
+    | ":"           {Colon}
+    | "Error"       {Error}
+    | "subgoal"     {Subgoal}
+    | "subgoals"    {Subgoals}
+    | "Lemma"       {Lemma}
+    | "Theorem"     {Theorem}
+    | "Remark"      {Remark}
+    | "Fact"        {Fact}
+    | "Corollary"   {Corollary}
+    | "Proposition" {Proposition}
+    | id as s       {Id s}
+    | int as s      {Int (int_of_string s)}
+    |
 

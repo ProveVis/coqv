@@ -1,11 +1,18 @@
+open Printf
 open Runtime
 open Types
+open Lexing
+(*open Parser*)
 
-let filter_input input = 
+let interpret_cmd cmd = 
+    printf "Interpreting command: %s\n" cmd;
+    flush stdout
 
+let handle_input input_str cout = 
+    output_string cout (input_str^"\n");
+    flush cout
 
 
 let handle_feedback feedback = 
-    match !current_session_id with
-    | None ->
-    | Some sid -> 
+    printf "%s" (Str.global_replace (ignored_re ()) "" feedback);
+    flush stdout
