@@ -5,3 +5,10 @@ Two modes of CoqV:
     - input a `.v` file, and using coqv command to retrive useful information.
 
 - History needs to be recorded during a session.
+
+
+.
+.
+.
+
+*TOO MUCH WORK TO DO, SOMEBODY HELP ME PLEASE!*
