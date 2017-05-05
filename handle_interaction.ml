@@ -18,5 +18,5 @@ let handle_input input_str cout =
 
 let handle_feedback feedback = 
     printf "got feedback message length: %d\n" (String.length feedback);
-    printf "%s" (Str.global_replace (ignored_re ()) "" feedback);
+    printf "%s\n" (Str.global_replace (ignored_re ()) "" feedback);
     flush stdout

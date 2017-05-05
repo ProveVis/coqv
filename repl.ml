@@ -46,11 +46,14 @@ let rec loop args =
         (*In_thread.run (fun () -> worker cin);*)
         ignore(Thread.create worker cin);
         (*input header information*)
-        let buffer = Bytes.create 1024 in
-        let len = input cin buffer 0 1024 in
-        let header = Bytes.sub_string buffer 0 len in
-        printf "\t\tCoqV version 0.1 [coqtop version %s]\n\n" (Str.global_replace (Str.regexp "\n") "" (Str.global_replace (Str.regexp "Welcome to Coq ") "" header));
         let running_coqv = ref false in
+        if not !Flags.xml then begin
+            let buffer = Bytes.create 1024 in
+            let len = input cin buffer 0 1024 in
+            let header = Bytes.sub_string buffer 0 len in
+            printf "\t\tCoqV version 0.1 [coqtop version %s]\n\n" (Str.global_replace (Str.regexp "\n") "" (Str.global_replace (Str.regexp "Welcome to Coq ") "" header))
+        end else 
+            running_coqv := true;
         while !running do
             if not !running_coqv then begin
                 Mutex.lock read_write_mutex;
@@ -77,4 +80,15 @@ let rec loop args =
         done
     end
 
-let _ = loop ["-ideslave"; "-xml"]
+let _ = 
+    Arg.parse
+        [
+            "-xml", Arg.Unit (fun () -> Flags.xml := true), "\tUsing XML to communicate with coqtop.";
+        ]
+        (fun s -> print_endline ("unknown option: "^s))
+        "Usage: coqv [-xml]";
+    if !Flags.xml then begin
+        print_endline "coqv with xml";
+        loop ["-xml";"-ideslave"; "-main-channel"; "stdfds"]
+    end else
+        loop ["-ideslave"]
