@@ -9,6 +9,20 @@ xml:
 	ocamlc -thread -c threads.cma unix.cma exninfo.ml
 	ocamlc -c loc.ml
 	ocamlc -c serialize.ml
+	ocamlc -c stateid.ml
+	ocamlc -c util.ml
+	ocamlc -c feedback.ml
+	ocamlc -c interface.mli
+	ocamlc -c dyn.ml
+	ocamlc -c pp_control.ml
+	ocamlc -c backtrace.ml
+	ocamlc -c pp.ml
+	ocamlc -c terminal.ml
+	ocamlc -c ppstyle.ml
+	ocamlc -c cErrors.ml
+	ocamlc -c richpp.ml
+	ocamlc -c xmlprotocol.ml
+
 
 test:
 	ocamlc -c xml_datatype.mli
