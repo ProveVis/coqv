@@ -1,6 +1,6 @@
 *.cm[ioxa]
 *.o
-*.mli
+parser.mli
 coqv
 coqv.exe
 repl
