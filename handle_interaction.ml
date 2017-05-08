@@ -7,6 +7,11 @@ open Lexing
 (*type request_mode =
     | *)
 
+let get_coq_info cout = 
+    let about = Xmlprotocol.About () in
+    let xml_about = Xmlprotocol.of_call about in
+    Xml_printer.print (Xml_printer.TChannel cout) xml_about
+
 let interpret_cmd cmd = 
     printf "Interpreting command: %s\n" cmd;
     flush stdout

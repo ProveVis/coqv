@@ -20,4 +20,13 @@ let _ =
     print_endline "";
     let str_list = Serialize.to_list (Serialize.to_string) xml_list in
     List.iter (fun s -> print_string (s^" ")) str_list;
+    print_endline "";
+    let about = Xmlprotocol.About () in
+    let xml_about = Xmlprotocol.of_call about in
+    Xml_printer.print (Xml_printer.TChannel stdout) xml_about;
+    print_endline "";
+    let init = Xmlprotocol.Init None in
+    let xml_init = Xmlprotocol.of_call init in
+    Xml_printer.print (Xml_printer.TChannel stdout) xml_init;
     print_endline ""
+
