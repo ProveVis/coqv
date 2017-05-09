@@ -6,20 +6,56 @@ open Interface
 (*open Parser*)
 
 type request_mode = 
-      Request_add           | Request_edit_at       | Request_query     | Request_goal 
+      Request_add           | Request_edit_at       | Request_query     | Request_goals
     | Request_evars         | Request_hints         | Request_status    | Request_search 
     | Request_getoptions    | Request_setoptions    | Request_mkcases   | Request_quit
     | Request_about         | Request_init          | Request_interp    | Request_stopworker 
     | Request_printast      | Request_annotate
 
 let request_mode = ref Request_about 
-
+(*************************************************************************************)
+(**sending xml characters to coqtop**)
 let request_coq_info cout = 
     request_mode := Request_about;
     let about = Xmlprotocol.About () in
     let xml_about = Xmlprotocol.of_call about in
     Xml_printer.print (Xml_printer.TChannel cout) xml_about
 
+let request_init filename cout = 
+    request_mode := Request_init;
+    let init = Xmlprotocol.init filename in
+    let xml_init = Xmlprotocol.of_call init in
+    Xml_printer.print (Xml_printer.TChannel cout) xml_init
+
+let request_quit cout = 
+    request_mode := Request_quit;
+    let quit = Xmlprotocol.quit () in
+    let xml_quit = Xmlprotocol.of_call quit in
+    Xml_printer.print (Xml_printer.TChannel cout) xml_quit
+
+(*let request_add cmd cout = 
+    request_mode := Request_add;
+    let add = Xmlprotocol.add cmd*)
+
+let request_goals cout = 
+    request_mode := Request_goals;
+    let goals = Xmlprotocol.goals () in
+    let xml_goals = Xmlprotocol.of_call goals in
+    Xml_printer.print (Xml_printer.TChannel cout) xml_goals
+
+let request_evars cout = 
+    request_mode := Request_evars;
+    let evars = Xmlprotocol.evars () in
+    let xml_evars = Xmlprotocol.of_call evars in
+    Xml_printer.print (Xml_printer.TChannel cout) xml_evars
+
+let request_hints cout = 
+    request_mode := Request_hints;
+    let hints = Xmlprotocol.hints () in
+    let xml_hints = Xmlprotocol.of_call hints in
+    Xml_printer.print (Xml_printer.TChannel cout) xml_hints
+
+(*************************************************************************************)
 let interpret_cmd cmd = 
     printf "Interpreting command: %s\n" cmd;
     flush stdout

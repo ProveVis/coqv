@@ -117,8 +117,8 @@ let rec loop args =
         done
     end
 
-let _ = 
-    Arg.parse
+let _ = loop ["-xml";"-ideslave"; "-main-channel"; "stdfds"]
+    (*Arg.parse
         [
             "-xml", Arg.Unit (fun () -> Flags.xml := true), "\tUsing XML to communicate with coqtop.";
         ]
@@ -128,4 +128,4 @@ let _ =
         (*print_endline "coqv with xml";*)
         loop ["-xml";"-ideslave"; "-main-channel"; "stdfds"]
     end else
-        loop ["-ideslave"]
+        loop ["-ideslave"]*)

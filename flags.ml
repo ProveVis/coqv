@@ -1,1 +1,2 @@
-let xml = ref false
+let xml = ref true
+
