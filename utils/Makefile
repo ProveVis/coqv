@@ -22,7 +22,7 @@ xml:
 	ocamlc -c cErrors.ml
 	ocamlc -c richpp.ml
 	ocamlc -c xmlprotocol.ml
-	ocamlc -thread -a -o ../xml.cma unix.cma threads.cma xml_datatype.mli xml_lexer.cmo xml_parser.cmo xml_printer.cmo \
+	ocamlc -thread -a -o xml.cma threads.cma xml_datatype.mli xml_lexer.cmo xml_parser.cmo xml_printer.cmo \
 	 cSig.mli store.cmo  exninfo.cmo loc.cmo serialize.cmo stateid.cmo \
 	 util.cmo feedback.cmo interface.mli dyn.cmo pp_control.cmo backtrace.cmo pp.cmo terminal.cmo \
 	 ppstyle.cmo cErrors.cmo richpp.cmo xmlprotocol.cmo
