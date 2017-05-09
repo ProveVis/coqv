@@ -52,8 +52,10 @@ let rec loop args =
             let len = input cin buffer 0 1024 in
             let header = Bytes.sub_string buffer 0 len in
             printf "\t\tCoqV version 0.1 [coqtop version %s]\n\n" (Str.global_replace (Str.regexp "\n") "" (Str.global_replace (Str.regexp "Welcome to Coq ") "" header))
-        end else 
-            running_coqv := true;
+        end else begin
+            Handle_interaction.get_coq_info cout;
+            running_coqv := false
+        end;
         while !running do
             if not !running_coqv then begin
                 Mutex.lock read_write_mutex;
