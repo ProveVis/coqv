@@ -1,5 +1,13 @@
 open Types
 open Printf
+open Interface
+
+let coqtop_info = ref {
+    coqtop_version = "";
+    protocol_version = "";
+    release_date = "";
+    compile_date = "";
+}
 
 let prompt = ref "Coq < "
 let ignored_re () = Str.regexp !prompt

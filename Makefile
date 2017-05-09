@@ -1,6 +1,6 @@
 all: 
 	ocamlfind ocamlc -I utils -thread -o coqv -package yojson -linkpkg -g str.cma threads.cma xml.cma \
-	 flags.ml types.ml communicate.ml runtime.ml handle_interaction.ml repl.ml
+	 flags.ml types.ml communicate.ml runtime.ml interaction.ml repl.ml
 
 xml:
 	make -C utils xml

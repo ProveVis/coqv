@@ -1,7 +1,8 @@
 open Printf
 open Str
 open Runtime
-open Handle_interaction
+open Interaction
+open Interface
 
 let in_chan = stdin
 let out_chan = stdout
@@ -26,6 +27,8 @@ let worker cin =
                 handle_feedback output_str
         end;
         Condition.signal read_write_condition
+        (*;
+        print_endline "received a feedback"*)
     done
 
 let rec loop args = 
@@ -44,7 +47,7 @@ let rec loop args =
         Unix.close slave2master_out;
         (*starting reading from repl*)
         (*In_thread.run (fun () -> worker cin);*)
-        ignore(Thread.create worker cin);
+        
         (*input header information*)
         let running_coqv = ref false in
         if not !Flags.xml then begin
@@ -53,9 +56,38 @@ let rec loop args =
             let header = Bytes.sub_string buffer 0 len in
             printf "\t\tCoqV version 0.1 [coqtop version %s]\n\n" (Str.global_replace (Str.regexp "\n") "" (Str.global_replace (Str.regexp "Welcome to Coq ") "" header))
         end else begin
-            Handle_interaction.get_coq_info cout;
-            running_coqv := false
+            Interaction.request_coq_info cout;
+            Thread.delay 0.1;
+            let buffer = Bytes.create 4096 in
+            let len = input cin buffer 0 4096 in
+            let header = Bytes.sub_string buffer 0 len in
+            (*print_endline ("received coq info msg, length "^(string_of_int(String.length header)));*)
+            (*print_endline ("msg content: "^header);*)
+            let xparser = Xml_parser.make (Xml_parser.SString header) in
+            (*print_endline ("xparser complete");*)
+            let xml_fb = Xml_parser.parse xparser in
+            (*print_endline ("xml_fb complete");*)
+            let fb_val = Xmlprotocol.to_value (Xmlprotocol.to_coq_info) xml_fb in
+            (*print_endline ("fb_val complete");*)
+            (match fb_val with
+            | Good fb -> begin
+                    Runtime.coqtop_info := fb;
+                    (*printf "Coqtop Info: \n\tversion %s, \n\tprotocol version %s, \n\trelease date %s, \n\tand compile date %s\n" 
+                        fb.coqtop_version fb.protocol_version fb.release_date fb.compile_date;*)
+                    printf "\t\tCoqV version 0.1 [coqtop version %s (%s)]\n\n" fb.coqtop_version fb.release_date;
+                    flush stdout
+                end
+            | _ -> printf "parsing message fails");
+            (*handle_feedback header;
+            let coqtop_info = !Runtime.coqtop_info in
+            printf "\t\tCoqV version 0.1 [coqtop version %s (%s)]\n\n" coqtop_info.coqtop_version coqtop_info.release_date;
+            flush stdout;*)
+            running_coqv := true
+            (*;
+            print_endline "init complete, ready to proceed"*)
         end;
+        ignore(Thread.create worker cin);
+        (*print_endline "have created worker";*)
         while !running do
             if not !running_coqv then begin
                 Mutex.lock read_write_mutex;
@@ -64,8 +96,11 @@ let rec loop args =
                 Thread.delay 0.01 (*waiting for the last input from coqtop to complete*)
             end;
             print_string "coqv> ";
+            (*let input_buffer = Bytes.create 1024 in
+            let len = input stdin input_buffer 0 1024 in
+            let input_str = Bytes.sub_string input_buffer 0 len in*)
             let input_str = read_line () in
-            (*printf "input length: %d\n" (String.length input_str);*)
+            printf "input length: %d\n" (String.length input_str);
             if (String.length input_str > 0) then begin
                 if String.sub input_str 0 1 = ":" then begin
                     running_coqv := true;
@@ -74,7 +109,7 @@ let rec loop args =
                     flush stdout*)
                     interpret_cmd cmd
                 end else begin
-                    running_coqv := false;
+                    running_coqv := true;
                     handle_input input_str cout
                 end
             end else 
@@ -90,7 +125,7 @@ let _ =
         (fun s -> print_endline ("unknown option: "^s))
         "Usage: coqv [-xml]";
     if !Flags.xml then begin
-        print_endline "coqv with xml";
+        (*print_endline "coqv with xml";*)
         loop ["-xml";"-ideslave"; "-main-channel"; "stdfds"]
     end else
         loop ["-ideslave"]
