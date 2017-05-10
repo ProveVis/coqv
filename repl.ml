@@ -6,7 +6,7 @@ open Interface
 
 let in_chan = stdin
 let out_chan = stdout
-let running = ref true
+(*let running = ref true*)
 
 let command_re = Str.regexp ":[-_A-Za-z0-9]+"
 
@@ -15,7 +15,7 @@ let read_write_mutex = Mutex.create ()
 
 let worker cin =     
     let buffer = Bytes.create 4096 in
-    while !running do
+    while !Runtime.running do
         let len = input cin buffer 0 4096 in
         if len = 0 then
             running := false
@@ -70,6 +70,17 @@ let rec loop args =
             let fb_val = Xmlprotocol.to_value (Xmlprotocol.to_coq_info) xml_fb in
             (*print_endline ("fb_val complete");*)
             (match fb_val with
+            | Good fb -> begin
+                    Runtime.coqtop_info := fb;
+                    (*printf "Coqtop Info: \n\tversion %s, \n\tprotocol version %s, \n\trelease date %s, \n\tand compile date %s\n" 
+                        fb.coqtop_version fb.protocol_version fb.release_date fb.compile_date;*)
+                    printf "\t\tCoqV version 0.1 [coqtop version %s (%s)]\n\n" fb.coqtop_version fb.release_date;
+                    flush stdout
+                end
+            | _ -> printf "parsing message fails");
+
+            let fb_val2 = Xmlprotocol.to_answer (Xmlprotocol.About ()) xml_fb in
+            (match fb_val2 with
             | Good fb -> begin
                     Runtime.coqtop_info := fb;
                     (*printf "Coqtop Info: \n\tversion %s, \n\tprotocol version %s, \n\trelease date %s, \n\tand compile date %s\n" 

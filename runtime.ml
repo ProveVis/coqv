@@ -22,6 +22,7 @@ let dummy_modul : modul =
 let current_session_id = ref None
 let moduls = ref [dummy_modul]
 let new_stateid = ref 0
+let running = ref true
 
 
 exception Node_not_found of string
