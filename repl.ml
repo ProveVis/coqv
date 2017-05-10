@@ -67,7 +67,7 @@ let rec loop args =
             (*print_endline ("xparser complete");*)
             let xml_fb = Xml_parser.parse xparser in
             (*print_endline ("xml_fb complete");*)
-            let fb_val = Xmlprotocol.to_value (Xmlprotocol.to_coq_info) xml_fb in
+            (*let fb_val = Xmlprotocol.to_value (Xmlprotocol.to_coq_info) xml_fb in
             (*print_endline ("fb_val complete");*)
             (match fb_val with
             | Good fb -> begin
@@ -77,7 +77,7 @@ let rec loop args =
                     printf "\t\tCoqV version 0.1 [coqtop version %s (%s)]\n\n" fb.coqtop_version fb.release_date;
                     flush stdout
                 end
-            | _ -> printf "parsing message fails");
+            | _ -> printf "parsing message fails");*)
 
             let fb_val2 = Xmlprotocol.to_answer (Xmlprotocol.About ()) xml_fb in
             (match fb_val2 with

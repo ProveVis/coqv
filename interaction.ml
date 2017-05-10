@@ -20,17 +20,14 @@ let request_coq_info cout =
     let about = Xmlprotocol.About () in
     let xml_about = Xmlprotocol.of_call about in
     Xml_printer.print (Xml_printer.TChannel cout) xml_about
-(**
-let response_coq_info fb_str = 
-    let xparser = Xml_parser.make (Xml_parser.SString fb_str) in
-    let xml_fb = Xml_parser.parse xparser in
-    let fb_val = Xmlprotocol.to_value (Xmlprotocol.to_coq_info) xml_fb in
+
+let response_coq_info fb_val = 
     (match fb_val with
     | Good fb -> 
             Runtime.coqtop_info := fb;
             printf "Coqtop Info: \n\tversion %s, \n\tprotocol version %s, \n\trelease date %s, \n\tand compile date %s\n" 
                 fb.coqtop_version fb.protocol_version fb.release_date fb.compile_date
-    | _ -> printf "parsing coq info message fails");
+    | _ -> printf "parsing coq info message fails\n");
     flush stdout
 
 let request_init filename cout = 
@@ -39,13 +36,12 @@ let request_init filename cout =
     let xml_init = Xmlprotocol.of_call init in
     Xml_printer.print (Xml_printer.TChannel cout) xml_init
 
-let response_init str_msg = 
-    let xparser = Xml_parser.make (Xml_parser.SString str_msg) in
-    let xml_msg = Xml_parser.parse xparser in
-    let msg = Xmlprotocol.to_value (Xmlprotocol.to_stateid) xml_msg in
+let response_init msg = 
     match msg with
-    | Good stateid -> print_endline ("got new stateid: "^(string_of_int stateid)); Runtime.new_stateid := stateid
-    | _ -> printf "unknown from response init"; flush stdout    
+    | Good stateid -> 
+        print_endline ("got new stateid: "^(string_of_int stateid)); 
+        Runtime.new_stateid := stateid
+    | _ -> printf "unknown from response init\n"; flush stdout    
 
 let request_quit cout = 
     request_mode := Request_quit;
@@ -53,13 +49,12 @@ let request_quit cout =
     let xml_quit = Xmlprotocol.of_call quit in
     Xml_printer.print (Xml_printer.TChannel cout) xml_quit
 
-let response_quit str_msg = 
-    let xparser = Xml_parser.make (Xml_parser.SString str_msg) in
-    let xml_msg = Xml_parser.parse xparser in
-    let msg = Xmlprotocol.to_value (Serialize.to_unit) xml_msg in
+let response_quit msg = 
     match msg with
-    | Good _ -> print_endline ("now quit! "); Runtime.running := false
-    | _ -> printf "unknown from response quit"; flush stdout  
+    | Good _ -> 
+        print_endline ("now quit! "); 
+        Runtime.running := false
+    | _ -> printf "unknown from response quit\n"; flush stdout  
 
 let request_add cmd editid stateid verbose cout = 
     request_mode := Request_add;
@@ -67,11 +62,36 @@ let request_add cmd editid stateid verbose cout =
     let xml_add = Xmlprotocol.of_call add in
     Xml_printer.print (Xml_printer.TChannel cout) xml_add
 
-let request_editat editid cout = 
+let response_add msg =
+    match msg with
+    | Good (stateid, CSig.Inl (), content) ->
+        printf "new state id: %d, message content: %s\n" stateid content;
+        Runtime.new_stateid := stateid;
+        flush stdout
+    | Good (stateid, CSig.Inr next_stateid, content) ->
+        printf "finished current proof, move to state id: %d, message content: %s\n" next_stateid content;
+        flush stdout
+    | Fail (stateid, _, Xml_datatype.PCData content) -> 
+        printf "error add in state id %d, message content: %s\n" stateid content;
+        flush stdout
+
+let request_edit_at editid cout = 
     request_mode := Request_edit_at;
     let editat = Xmlprotocol.edit_at editid in
     let xml_editat = Xmlprotocol.of_call editat in
     Xml_printer.print (Xml_printer.TChannel cout) xml_editat
+
+let response_edit_at msg =
+    match msg with
+    | Good (CSig.Inl ()) ->
+        printf "simple backtract;\n";
+        flush stdout
+    | Good (CSig.Inr (focusedStateId, (focusedQedStateId, oldFocusedStateId))) ->
+        printf "focusedStateId: %d, focusedQedStateId: %d, oldFocusedStateId: %d\n" focusedStateId focusedQedStateId oldFocusedStateId;
+        flush stdout
+    | Fail (errorFreeStateId, loc, Xml_datatype.PCData content) ->
+        printf "errorFreeStateId: %d, message content: %s\n" errorFreeStateId content
+        flush stdout
 
 let request_query query stateid cout = 
     request_mode := Request_query;
@@ -79,19 +99,25 @@ let request_query query stateid cout =
     let xml_query = Xmlprotocol.of_call query in
     Xml_printer.print (Xml_printer.TChannel cout) xml_query
 
-let response_query str_msg = 
-    let xparser = Xml_parser.make (Xml_parser.SString str_msg) in
-    let xml_msg = Xml_parser.parse xparser in
-    let msg = Xmlprotocol.to_value (Serialize.to_string) xml_msg in
+let response_query msg = 
     match msg with
     | Good query -> print_endline query
-    | _ -> printf "unknown from response query"; flush stdout
+    | _ -> printf "unknown from response query\n"; flush stdout
 
 let request_goals cout = 
     request_mode := Request_goals;
     let goals = Xmlprotocol.goals () in
     let xml_goals = Xmlprotocol.of_call goals in
     Xml_printer.print (Xml_printer.TChannel cout) xml_goals
+
+let response_goals msg =
+    match msg with
+    | Good None -> 
+        print_endline "no more goals"
+    | Good (Some goals) -> begin
+            printf "focused goals number: %d,"
+        end
+    | Fail ->()
 
 let request_evars cout = 
     request_mode := Request_evars;
@@ -105,7 +131,7 @@ let request_hints cout =
     let xml_hints = Xmlprotocol.of_call hints in
     Xml_printer.print (Xml_printer.TChannel cout) xml_hints
 
-*************************************************************************************)
+(*************************************************************************************)
 let interpret_cmd cmd = 
     printf "Interpreting command: %s\n" cmd;
     flush stdout
@@ -122,18 +148,34 @@ let handle_feedback feedback =
     if not !Flags.xml then begin
         printf "%s\n" fb_str
     end else begin
-        (*match !request_mode with
-        | Request_about -> response_coq_info fb_str
-        | Request_init -> response_init fb_str
-        | Request_edit_at -> response_edit_at fb_str
-        | Request_query -> response_query fb_str
-        | Request_goals -> response_goals fb_str
-        | Request_evars -> response_evars fb_str
-        | Request_hints -> response_hints fb_str
-        | Request_status -> response_status fb_str
-        | Request_search -> response_search fb_str
-        | Request_getoptions -> response_getoptions fb_str
-        | Request_setoptions -> response_setoptions fb_str
-        | Request_mkcases -> response_mkcases fb_str
-        | Request_quit -> response_quit fb_str*)
+        let xparser = Xml_parser.make (Xml_parser.SString fb_str) in
+        let xml_fb = Xml_parser.parse xparser in
+        match Xmlprotocol.is_message xml_fb with
+        | Some (level, loc, content) ->
+            printf "%s: %s" level content;
+            flush stdout
+        | None -> 
+            if Xmlprotocol.is_feedback xml_fb then
+                () (*does nothing on feedbacks*)
+            else begin
+                match !request_mode with
+                | Request_about ->      response_coq_info (Xmlprotocol.to_answer (Xmlprotocol.About ()) xml_fb)
+                | Request_init ->       response_init (Xmlprotocol.to_answer (Xmlprotocol.init None) xml_fb)
+                | Request_edit_at ->    response_edit_at (Xmlprotocol.to_answer (Xmlprotocol.edit_at 0) xml_fb)
+                | Request_query ->      response_query (Xmlprotocol.to_answer (Xmlprotocol.query ("", 0)) xml_fb)
+                | Request_goals ->      response_goals (Xmlprotocol.to_answer (Xmlprotocol.goals ()) xml_fb)
+                | Request_evars ->      response_evars (Xmlprotocol.to_answer (Xmlprotocol.evars ()) xml_fb)
+                | Request_hints ->      response_hints (Xmlprotocol.to_answer (Xmlprotocol.hints ()) xml_fb)
+                | Request_status ->     response_status (Xmlprotocol.to_answer (Xmlprotocol.status true) xml_fb)
+                | Request_search ->     response_search (Xmlprotocol.to_answer (Xmlprotocol.search []) xml_fb)
+                | Request_getoptions -> response_getoptions (Xmlprotocol.to_answer (Xmlprotocol.get_options ()) xml_fb)
+                | Request_setoptions -> response_setoptions (Xmlprotocol.to_answer (Xmlprotocol.set_options []) xml_fb)
+                | Request_mkcases ->    response_mkcases (Xmlprotocol.to_answer (Xmlprotocol.mkcases "") xml_fb)
+                | Request_quit ->       response_quit (Xmlprotocol.to_answer (Xmlprotocol.quit ()) xml_fb)
+                | Request_add ->        response_add (Xmlprotocol.to_answer (Xmlprotocol.add (("",0),(0,true))) xml_fb)
+                | Request_interp ->     response_iterp (Xmlprotocol.to_answer (Xmlprotocol.interp ((true, true),"")) xml_fb)
+                | Request_stopworker -> response_stopworker (Xmlprotocol.to_answer (Xmlprotocol.stop_worker "") xml_fb)
+                | Request_printast ->   response_printast (Xmlprotocol.to_answer (Xmlprotocol.print_ast 0) xml_fb)
+                | Request_annotate ->   response_annotate (Xmlprotocol.to_answer (Xmlprotocol.annotate "") xml_fb)
+            end
     end
