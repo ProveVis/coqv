@@ -45,6 +45,8 @@ let rec loop args =
         let cin, cout = Unix.in_channel_of_descr slave2master_in, Unix.out_channel_of_descr master2slave_out in
         Unix.close master2slave_in;
         Unix.close slave2master_out;
+        Runtime.coq_channels.cin <- cin;
+        Runtime.coq_channels.cout <- cout;
         (*starting reading from repl*)
         (*In_thread.run (fun () -> worker cin);*)
         

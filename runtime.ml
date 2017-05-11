@@ -9,6 +9,16 @@ let coqtop_info = ref {
     compile_date = "";
 }
 
+type channels = {
+    mutable cin: in_channel;
+    mutable cout: out_channel;
+}
+
+let coq_channels : channels = {
+    cin = stdin;
+    cout = stdout;
+}
+
 let prompt = ref "Coq < "
 let ignored_re () = Str.regexp !prompt
 
@@ -23,6 +33,7 @@ let current_session_id = ref None
 let moduls = ref [dummy_modul]
 let new_stateid = ref 0
 let running = ref true
+
 (*let coq_state_id = ref 0*)
 
 

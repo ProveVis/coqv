@@ -15,6 +15,28 @@ type request_mode =
 let request_mode = ref Request_about 
 (*************************************************************************************)
 (**sending xml characters to coqtop**)
+let escaped_cmd cmd = 
+    let buffer = Bytes.create 1024 in
+    let length = ref 0 in
+    let add_str_to_buffer str = 
+        String.iter (fun c -> Bytes.fill buffer !length 1 c; incr length) str in
+    let eacape_char c = 
+        match c with
+        | '&' -> Some "&amp;"
+        | '<' -> Some "&lt;"
+        | '>' -> Some "&gt;"
+        | '"' -> Some "&quot;"
+        | '\'' -> Some "&apos;"
+        | _ -> None in
+    String.iter (fun c -> 
+        match eacape_char c with
+        | Some str -> add_str_to_buffer str
+        | None -> Bytes.fill buffer !length 1 c; incr length) cmd;
+    let escapted_str = Bytes.sub_string buffer 0 !length in 
+    printf "raw cmd: %s, escaped cmd: %s\n" cmd escapted_str;
+    flush stdout;
+    escapted_str
+
 let request_coq_info cout = 
     request_mode := Request_about;
     let about = Xmlprotocol.About () in
@@ -56,24 +78,50 @@ let response_quit msg =
         Runtime.running := false
     | _ -> printf "unknown from response quit\n"; flush stdout  
 
-let request_add cmd editid stateid verbose cout = 
+let request_goals () =
+    let cout = Runtime.coq_channels.cout in 
+    request_mode := Request_goals;
+    let goals = Xmlprotocol.goals () in
+    let xml_goals = Xmlprotocol.of_call goals in
+    Xml_printer.print (Xml_printer.TChannel cout) xml_goals
+
+let response_goals msg =
+    match msg with
+    | Good None -> 
+        print_endline "no more goals";
+        Doc_model.raise_cache ()
+    | Good (Some goals) -> begin
+            printf "focused goals number: %d,";
+            Doc_model.raise_cache ()
+        end
+    | Fail -> Doc_model.clear_cache ()
+
+let request_add cmd editid stateid verbose = 
+    let ecmd = escaped_cmd cmd in
+    let cout = Runtime.coq_channels.cout in
     request_mode := Request_add;
-    let add = Xmlprotocol.add ((cmd, editid), (stateid, verbose)) in
+    let add = Xmlprotocol.add ((ecmd, editid), (stateid, verbose)) in
     let xml_add = Xmlprotocol.of_call add in
-    Xml_printer.print (Xml_printer.TChannel cout) xml_add
+    Xml_printer.print (Xml_printer.TChannel cout) xml_add;
+    Doc.cache := Some (stateid, cmd)
 
 let response_add msg =
-    match msg with
-    | Good (stateid, CSig.Inl (), content) ->
-        printf "new state id: %d, message content: %s\n" stateid content;
-        Runtime.new_stateid := stateid;
-        flush stdout
-    | Good (stateid, CSig.Inr next_stateid, content) ->
-        printf "finished current proof, move to state id: %d, message content: %s\n" next_stateid content;
-        flush stdout
-    | Fail (stateid, _, Xml_datatype.PCData content) -> 
-        printf "error add in state id %d, message content: %s\n" stateid content;
-        flush stdout
+    begin
+        match msg with
+        | Good (stateid, CSig.Inl (), content) ->
+            printf "new state id: %d, message content: %s\n" stateid content;
+            Runtime.new_stateid := stateid;
+            flush stdout
+        | Good (stateid, CSig.Inr next_stateid, content) ->
+            printf "finished current proof, move to state id: %d, message content: %s\n" next_stateid content;
+            Runtime.new_stateid := next_stateid;
+            flush stdout
+        | Fail (stateid, _, Xml_datatype.PCData content) -> 
+            printf "error add in state id %d, message content: %s\n" stateid content;
+            Doc_model.clear_cache ();
+            flush stdout
+    end;
+    request_goals ()
 
 let request_edit_at editid cout = 
     request_mode := Request_edit_at;
@@ -104,20 +152,7 @@ let response_query msg =
     | Good query -> print_endline query
     | _ -> printf "unknown from response query\n"; flush stdout
 
-let request_goals cout = 
-    request_mode := Request_goals;
-    let goals = Xmlprotocol.goals () in
-    let xml_goals = Xmlprotocol.of_call goals in
-    Xml_printer.print (Xml_printer.TChannel cout) xml_goals
 
-let response_goals msg =
-    match msg with
-    | Good None -> 
-        print_endline "no more goals"
-    | Good (Some goals) -> begin
-            printf "focused goals number: %d,"
-        end
-    | Fail ->()
 
 let request_evars cout = 
     request_mode := Request_evars;
@@ -132,6 +167,10 @@ let request_hints cout =
     Xml_printer.print (Xml_printer.TChannel cout) xml_hints
 
 (*************************************************************************************)
+let interpret_feedback xml_fb = 
+    let fb = Xmlprotocol.to_feedback xml_fb in
+
+
 let interpret_cmd cmd = 
     printf "Interpreting command: %s\n" cmd;
     flush stdout
@@ -141,7 +180,7 @@ let handle_input input_str cout =
     flush stdout
 
 
-let handle_feedback feedback = 
+let handle_answer feedback = 
     let fb_str = Str.global_replace (ignored_re ()) "" feedback in
     printf "got feedback message length: %d\n" (String.length fb_str);
     printf "%s\n\n" fb_str;
@@ -156,7 +195,7 @@ let handle_feedback feedback =
             flush stdout
         | None -> 
             if Xmlprotocol.is_feedback xml_fb then
-                () (*does nothing on feedbacks*)
+                (interpret_feedback xml_fb) (*does nothing on feedbacks*)
             else begin
                 match !request_mode with
                 | Request_about ->      response_coq_info (Xmlprotocol.to_answer (Xmlprotocol.About ()) xml_fb)
