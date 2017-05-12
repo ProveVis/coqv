@@ -15,7 +15,7 @@ type request_mode =
 let request_mode = ref Request_about 
 (*************************************************************************************)
 (**sending xml characters to coqtop**)
-let escaped_cmd cmd = 
+let escaped_str str = 
     let buffer = Bytes.create 1024 in
     let length = ref 0 in
     let add_str_to_buffer str = 
@@ -27,15 +27,25 @@ let escaped_cmd cmd =
         | '>' -> Some "&gt;"
         | '"' -> Some "&quot;"
         | '\'' -> Some "&apos;"
+        | ' ' -> Some "&nbsp;";
         | _ -> None in
     String.iter (fun c -> 
         match eacape_char c with
         | Some str -> add_str_to_buffer str
-        | None -> Bytes.fill buffer !length 1 c; incr length) cmd;
+        | None -> Bytes.fill buffer !length 1 c; incr length) str;
     let escapted_str = Bytes.sub_string buffer 0 !length in 
-    printf "raw cmd: %s, escaped cmd: %s\n" cmd escapted_str;
-    flush stdout;
+    (*printf "raw str: %s, escaped str: %s\n" str escapted_str;
+    flush stdout;*)
     escapted_str
+
+let caught_str str = 
+    let str1 = Str.global_replace (Str.regexp "&nbsp;") " " str in
+    let str2 = Str.global_replace (Str.regexp "&apos;") "'" str1 in
+    let str3 = Str.global_replace (Str.regexp "&quot;") "\"" str2 in
+    let str4 = Str.global_replace (Str.regexp "&amp;") "&" str3 in
+    let str5 = Str.global_replace (Str.regexp "&gt;") ">" str4 in
+    let str6 = Str.global_replace (Str.regexp "&lt;") "<" str5 in
+    str6
 
 let request_coq_info cout = 
     request_mode := Request_about;
