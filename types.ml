@@ -29,21 +29,22 @@ type node = {
     id: string;
     label: string;
     mutable state: node_state;
-    parent: node;
+    mutable parent: node;
 }
 
 type tatic = string
 
 type step = tatic * node * (node list)
 
-type children = tatic * (node list)
+type children = tatic * (string list)
 
 let str_node n = 
     "Node "^n.id^"("^(str_node_state n.state)^"): "^n.label
 
 type proof_tree = {
+    mutable root : node;
     nodes: (string, node) Hashtbl.t; 
-    edges: (node, children) Hashtbl.t
+    edges: (string, children) Hashtbl.t
 }
 
 type session = {

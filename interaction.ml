@@ -6,7 +6,10 @@ open Interface
 (*open Parser*)
 
 type request_mode = 
-      Request_add           | Request_edit_at       | Request_query     | Request_goals
+      Request_add           
+    | Request_edit_at of Stateid.t
+    | Request_query     
+    | Request_goals
     | Request_evars         | Request_hints         | Request_status    | Request_search 
     | Request_getoptions    | Request_setoptions    | Request_mkcases   | Request_quit
     | Request_about         | Request_init          | Request_interp    | Request_stopworker 
@@ -133,25 +136,32 @@ let response_add msg =
     end;
     request_goals ()
 
-let request_edit_at editid cout = 
-    request_mode := Request_edit_at;
+let request_edit_at stateid = 
+    let cout = Runtime.coq_channels.cout in
+    request_mode := Request_edit_at editid;
     let editat = Xmlprotocol.edit_at editid in
-    let xml_editat = Xmlprotocol.of_call editat in
+    let xml_editat = Xmlprotocol.of_call stateid in
     Xml_printer.print (Xml_printer.TChannel cout) xml_editat
 
-let response_edit_at msg =
+let response_edit_at msg stateid =
     match msg with
     | Good (CSig.Inl ()) ->
         printf "simple backtract;\n";
-        flush stdout
+        flush stdout;
+        Doc_model.move_focus_to stateid;
+        Runtime.new_stateid := stateid
     | Good (CSig.Inr (focusedStateId, (focusedQedStateId, oldFocusedStateId))) ->
         printf "focusedStateId: %d, focusedQedStateId: %d, oldFocusedStateId: %d\n" focusedStateId focusedQedStateId oldFocusedStateId;
-        flush stdout
+        flush stdout;
+        Doc_model.move_focus_to stateid;
+        Runtime.new_stateid := stateid
     | Fail (errorFreeStateId, loc, Xml_datatype.PCData content) ->
         printf "errorFreeStateId: %d, message content: %s\n" errorFreeStateId content
-        flush stdout
+        flush stdout;
+        request_edit_at errorFreeStateId
 
-let request_query query stateid cout = 
+let request_query query stateid = 
+    let cout = Runtime.coq_channels.cout in
     request_mode := Request_query;
     let query = Xmlprotocol.query query in
     let xml_query = Xmlprotocol.of_call query in
@@ -210,7 +220,7 @@ let handle_answer feedback =
                 match !request_mode with
                 | Request_about ->      response_coq_info (Xmlprotocol.to_answer (Xmlprotocol.About ()) xml_fb)
                 | Request_init ->       response_init (Xmlprotocol.to_answer (Xmlprotocol.init None) xml_fb)
-                | Request_edit_at ->    response_edit_at (Xmlprotocol.to_answer (Xmlprotocol.edit_at 0) xml_fb)
+                | Request_edit_at stateid -> response_edit_at (Xmlprotocol.to_answer (Xmlprotocol.edit_at 0) xml_fb) stateid
                 | Request_query ->      response_query (Xmlprotocol.to_answer (Xmlprotocol.query ("", 0)) xml_fb)
                 | Request_goals ->      response_goals (Xmlprotocol.to_answer (Xmlprotocol.goals ()) xml_fb)
                 | Request_evars ->      response_evars (Xmlprotocol.to_answer (Xmlprotocol.evars ()) xml_fb)
