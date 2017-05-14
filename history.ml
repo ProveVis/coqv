@@ -2,22 +2,32 @@ open Types
 open Runtime
 
 
+type step = 
+      Change_state of node_state * node_state
+    | Add_node of string
 
-let history_list = ref [] 
+type history = (Stateid.t * (step list)) list
 
-let record_step tatic node sub_nodes = 
-    let proof_tree = current_proof_tree () in
-    List.iter (fun n -> Hashtbl.add proof_tree.nodes n.id n) sub_nodes;
-    Hashtbl.add proof_tree.edges node (tatic, sub_nodes);
-    history_list := (tatic, node, sub_nodes) :: !history_list
+let history = ref [] 
 
+let record_step stateid step =
+    let sid, steps = List.hd !history in
+    if sid = stateid then
+        history := (sid, step :: steps) :: (List.tl !history)
+    else 
+        history := (sid, [step]) :: !history
 
-let undo_step n = 
-    match !history_list with
-    | [] -> ()
-    | (tatic, node, sub_nodes) :: steps ->
-        let proof_tree = current_proof_tree () in
-        List.iter (fun n -> Hashtbl.remove proof_tree.nodes n.id) sub_nodes;
-        Hashtbl.remove proof_tree.edges node;
-        history_list := List.tl (!history_list);
-        undo_step (n-1) 
+let undo_upto stateid =
+    let flag = ref true in
+    while !history <> [] && !flag do
+        let (sid, steps) = List.hd !history in
+        if sid = stateid then
+            flag := false
+        else begin
+            let undo_step step =
+                match step with
+                | Change_state (from_state, to_state) -> Proof_model.change_node_state to_state from_state
+                | Add_node nid -> Proof_model.remove_node nid in
+            List.iter (fun s -> undo_step s) steps
+        end
+    done

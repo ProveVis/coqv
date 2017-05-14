@@ -23,11 +23,14 @@ let goal_to_label goal =
     let hyp_list = List.map (fun h ->
             let ch = caught_str h in
             let split_pos = String.index ch ':' in
-            
+            let hn, hc = String.sub ch 0 (split_pos), String.sub ch (split_pos+1) (String.length-split_pos-1) in
+            String.trim hn, String.trim hc 
         ) raw_hyp_list in
+    let conc = String.trim (caught_str (Serialize.to_string goal.goal_ccl)) in
     {
-        id: goal.goal_id;
-
+        id = goal.goal_id;
+        hypos = hyp_list;
+        conclusion = conc;
     }
 
 (*************************************************************************************)
