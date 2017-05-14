@@ -1,6 +1,7 @@
 open Types
 open Printf
 
+
 let new_proof_tree node = 
     {
         root = node;

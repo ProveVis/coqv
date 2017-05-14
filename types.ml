@@ -25,9 +25,21 @@ let str_node_state ns =
     | To_be_chosen -> "To_be_chosen"
     | Chosen -> "Chosen"
 
+type label = {
+        id: string;
+        hypos: (string * string) list;
+        conclusion: string; 
+    }
+
+let str_label label = 
+    let str_buf = ref "" in
+    List.iter (fun (hn, hc) -> str_buf := !str_buf ^ hn ^ ":" ^ hc^"\n") label.hypos;
+    str_buf := !str_buf ^ "==========================\n"^label.conclusion;
+    !str_buf
+
 type node = {
     id: string;
-    label: string;
+    label: label;
     mutable state: node_state;
     mutable parent: node;
 }
@@ -39,7 +51,7 @@ type step = tatic * node * (node list)
 type children = tatic * (string list)
 
 let str_node n = 
-    "Node "^n.id^"("^(str_node_state n.state)^"): "^n.label
+    "Node "^n.id^"("^(str_node_state n.state)^"): \n"^(str_label n.label)^"\n"
 
 type proof_tree = {
     mutable root : node;
