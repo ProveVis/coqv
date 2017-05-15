@@ -1,11 +1,14 @@
 
-type proof_kind = Lemma | Proposition | Theorem | Axiom
+type proof_kind = Lemma | Proposition | Theorem | Remark | Corollary | Fact | Goal
 let str_proof_kind pk = 
     match pk with
     | Lemma -> "Lemma"
     | Proposition -> "Proposition"
     | Theorem -> "Theorem"
-    | Axiom -> "Axiom"
+    | Remark -> "Remark"
+    | Corollary -> "Corollary"
+    | Fact -> "Fact"
+    | Goal -> "Goal"
 
 type proof_state = Start | Processing | Complete | Aborted | Assumed
 let str_proof_state ps = 
@@ -75,7 +78,9 @@ type modul = {
 }
 (********************************************************************)
 
-type coq_input = 
-    | Start_session of proof_kind * string * string
-    | Proof 
+type cmd_type = 
+      Module of string
+    | End of string
+    | Proof of string * proof_kind
     | Qed
+    | Other

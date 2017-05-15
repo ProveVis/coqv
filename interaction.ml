@@ -91,7 +91,8 @@ let response_goals msg =
         Doc_model.raise_cache ()
     | Good (Some goals) -> begin
             printf "focused goals number: %d,";
-            Doc_model.raise_cache ()
+            Doc_model.raise_cache ();
+            
         end
     | Fail -> Doc_model.clear_cache ()
 
@@ -179,6 +180,8 @@ let interpret_feedback xml_fb =
 
 let interpret_cmd cmd = 
     printf "Interpreting command: %s\n" cmd;
+    Cmd.current_cmd_type := Cmd.get_cmd_type cmd in
+    request_add (Cmd.escape_str cmd) (-1) !Runtime.new_stateid true;
     flush stdout
 
 let handle_input input_str cout = 

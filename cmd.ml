@@ -31,3 +31,25 @@ let caught_str str =
     let str5 = Str.global_replace (Str.regexp "&gt;") ">" str4 in
     let str6 = Str.global_replace (Str.regexp "&lt;") "<" str5 in
     str6
+
+let current_cmd_type = ref Other
+
+
+let get_cmd_type cmd =
+    let tcmd = String.trim cmd in
+    let splited = Str.split (Str.regexp "[ \t<:\.]+") tcmd in
+    match splited with
+    | "Module" :: tl_split -> 
+        if List.hd (List.tl splited) <> "Type" then
+            Module (List.hd tl_split)
+        else Other
+    | "End" :: tl_split -> End (List.hd tl_split)
+    | "Theorem" :: tl_split -> Proof (List.hd tl_split, Theorem)
+    | "Lemma" :: tl_split -> Proof (List.hd tl_split, Lemma)
+    | "Proposition" :: tl_split -> Proof (List.hd tl_split, Proposition)
+    | "Corollary" :: tl_split -> Proof (List.hd tl_split, Corollary)
+    | "Remark" :: tl_split -> Proof (List.hd tl_split, Remark)
+    | "Fact" :: tl_split -> Proof (List.hd tl_split, Fact)
+    | "Goal" :: tl_split -> Proof ("Unnamed_thm", Goal)
+    | "Qed" :: tl_split -> Qed
+    | _ -> Other

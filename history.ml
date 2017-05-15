@@ -3,7 +3,7 @@ open Runtime
 
 
 type step = 
-      Change_state of node_state * node_state
+      Change_state of string * node_state
     | Add_node of string
 
 type history = (Stateid.t * (step list)) list
@@ -26,7 +26,7 @@ let undo_upto stateid =
         else begin
             let undo_step step =
                 match step with
-                | Change_state (from_state, to_state) -> Proof_model.change_node_state to_state from_state
+                | Change_state (nid, from_state) -> Proof_model.change_node_state nid from_state
                 | Add_node nid -> Proof_model.remove_node nid in
             List.iter (fun s -> undo_step s) steps
         end

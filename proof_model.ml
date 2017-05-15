@@ -1,6 +1,10 @@
 open Types
 open Printf
 
+let current_session_id = ref None
+let moduls = ref [dummy_modul]
+
+(*let coq_state_id = ref 0*)
 
 let new_proof_tree node = 
     {
@@ -13,7 +17,123 @@ let new_proof_tree node =
         edges = Hashtbl.create 1;
     }
 
-let add_edge proof_tree from_node to_node tatic = 
+
+exception Node_not_found of string
+exception Session_not_found of string
+exception Not_in_session
+exception Closing_wrong_module of string * string
+
+let closing_modul name = 
+    let top_modul = List.hd !moduls in
+    let snd_top_modul = List.hd (List.tl !moduls) in
+    if name = top_modul.name then begin
+        Hashtbl.add snd_top_modul.modul_tbl name top_modul;
+        moduls := List.tl !moduls
+    end else begin
+        raise (Closing_wrong_module (top_modul.name, name))  
+    end
+
+let current_proof_tree () = 
+    match !current_session_id with
+    | None -> raise Not_in_session
+    | Some sid -> 
+        try
+            let session = Hashtbl.find ((List.hd !moduls).sessions) sid in
+            session.proof_tree
+        with Not_found -> raise (Session_not_found sid)
+
+let node_exists nid = 
+    let proof_tree = current_proof_tree () in
+    Hashtbl.mem proof_tree.nodes nid
+
+let select_node nid = 
+    match !current_session_id with
+    | None -> raise Not_in_session
+    | Some sid -> begin
+        try
+            let session = Hashtbl.find ((List.hd !moduls).sessions) sid in
+            try
+                Hashtbl.find session.proof_tree.nodes nid
+            with 
+                Not_found -> raise (Node_not_found nid);
+        with Not_found -> raise (Session_not_found sid)
+    end
+
+let add_node node nodeid = 
+    let parent = select_node nodeid in
+    node.parent <- parent;
+    let proof_tree = current_proof_tree () in
+    Hashtbl.add proof_tree.nodes node.id node
+
+
+
+let children node = 
+    match !current_session_id with
+    | None -> raise Not_in_session
+    | Some sid ->
+        let session = Hashtbl.find ((List.hd !moduls).sessions) sid in
+        Hashtbl.find session.proof_tree.edges node
+
+let hide node = 
+    printf "hiding node %s\n" node.id; 
+    flush stdout
+
+let show node = 
+    printf "showing node %s\n" node.id;
+    flush stdout
+
+let is_children_complete proof_tree nodeid = 
+    let _, children_id = Hashtbl.find proof_tree.edges nodeid in
+    let flag = ref true in
+    List.iter (fun cid -> 
+        match (Hashtbl.find proof_tree.nodes cid).state with
+        | Proved | Assumed -> ()
+        | _ -> flag := false
+    ) children_id;
+    !flag
+
+let change_node_state nid state = 
+    let proof_tree = current_proof_tree () in
+    let tmp_node_queue = Queue.create () in
+    Queue.push proof_tree.root;
+    let flag = ref true in
+    while !flag && not Queue.is_empty tmp_node_queue do
+        let node = Queue.pop tmp_node_queue in
+        if node.id = nid then begin
+            node.state <- state;
+            let rec change_others other_node = 
+                if is_children_complete proof_tree other_node.id then
+                    other_node.state <- Not_proved;
+                if other_node.id <> other_node.parent.id then
+                    change_others other_node.parent in
+            change_others node.parent;
+            flag := false
+        end else begin
+            let _, children_id = Hashtbl.find proof_tree.edges nid in
+            List.iter (fun cid ->Queue.push tmp_node_queue (Hashtbl.find proof_tree.nodes cid)) children_id
+        end 
+    done
+
+let remove_node nid = 
+    let proof_tree = current_proof_tree () in
+    assert (nid <> proof_tree.root.id);
+    let tmp_node_queue = Queue.create () in
+    Queue.push proof_tree.root;
+    while not Queue.is_empty tmp_node_queue do
+        let node = Queue.pop tmp_node_queue in
+        Hashtbl.remove proof_tree.nodes node.id;
+        let _, children_id = Hashtbl.find proof_tree.edges nid in
+        List.iter (fun cid ->Queue.push tmp_node_queue (Hashtbl.find proof_tree.nodes cid)) children_id;
+        Hashtbl.remove proof_tree.edges node.id
+    done
+
+let print_label node = 
+    printf "%s\n" node.label;
+    flush stdout
+
+
+let add_edge from_node to_node tatic = 
+    let proof_tree = current_proof_tree () in
     if from_node.id = to_node.id then ();
     if Hashtbl.mem proof_tree.nodes from_node.id then begin
         to_node.parent <- from_node;
@@ -30,9 +150,6 @@ let add_edge proof_tree from_node to_node tatic =
         printf "cannot find where to add node %s\n" to_node.id;
         flush stdout
     end
-
-let change_node_state node node_state = 
-    node.state <- node_state
 
 let new_session sname skind sstate proof_tree = 
     {
