@@ -22,14 +22,6 @@ let coq_channels : channels = {
 let prompt = ref "Coq < "
 let ignored_re () = Str.regexp !prompt
 
-let dummy_modul : modul = 
-    {
-        name = "";
-        sessions = Hashtbl.create 1;
-        modul_tbl = Hashtbl.create 1;
-    }
-
-
 let new_stateid = ref 0
 let running = ref true
 

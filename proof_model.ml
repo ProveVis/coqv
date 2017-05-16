@@ -1,8 +1,17 @@
 open Types
 open Printf
 
+let create_module modul_name = 
+    {
+        name = modul_name;
+        sessions = Hashtbl.create 1;
+        modul_tbl = Hashtbl.create 1;
+    }
+
+
 let current_session_id = ref None
-let moduls = ref [dummy_modul]
+let top_module = create_module "Unnamed_module"
+let moduls = ref [top_module]
 
 (*let coq_state_id = ref 0*)
 
@@ -24,13 +33,14 @@ exception Not_in_session
 exception Closing_wrong_module of string * string
 
 let closing_modul name = 
-    let top_modul = List.hd !moduls in
+    if name = top_module.name then ();
+    let fst_modul = List.hd !moduls in
     let snd_top_modul = List.hd (List.tl !moduls) in
-    if name = top_modul.name then begin
-        Hashtbl.add snd_top_modul.modul_tbl name top_modul;
+    if name = fst_modul.name then begin
+        Hashtbl.add snd_top_modul.modul_tbl name fst_modul;
         moduls := List.tl !moduls
     end else begin
-        raise (Closing_wrong_module (top_modul.name, name))  
+        raise (Closing_wrong_module (fst_modul.name, name))  
     end
 
 let current_proof_tree () = 
@@ -58,6 +68,23 @@ let select_node nid =
                 Not_found -> raise (Node_not_found nid);
         with Not_found -> raise (Session_not_found sid)
     end
+
+let select_chosen_node () = 
+    let focused = ref None in
+    let proof_tree = current_proof_tree () in
+    let tmp_node_queue = Queue.create () in
+    Queue.push proof_tree.root;
+    let flag = ref true in
+    while !flag && not (Queue.is_empty tmp_node_queue) do
+        let node = Queue.pop tmp_node_queue in
+        if node.state = Chosen then begin
+            focused := Some node;
+            flag := false    
+        end else 
+            let _, children_id = Hashtbl.find proof_tree.edges nid in
+            List.iter (fun cid -> Queue.push tmp_node_queue (Hashtbl.find proof_tree.nodes cid)) children_id
+    done;
+    !focused
 
 let add_node node nodeid = 
     let parent = select_node nodeid in
@@ -97,12 +124,14 @@ let change_node_state nid state =
     let tmp_node_queue = Queue.create () in
     Queue.push proof_tree.root;
     let flag = ref true in
-    while !flag && not Queue.is_empty tmp_node_queue do
+    while !flag && not (Queue.is_empty tmp_node_queue) do
         let node = Queue.pop tmp_node_queue in
         if node.id = nid then begin
             node.state <- state;
             let rec change_others other_node = 
                 if is_children_complete proof_tree other_node.id then
+                    other_node.state <- Proved
+                else 
                     other_node.state <- Not_proved;
                 if other_node.id <> other_node.parent.id then
                     change_others other_node.parent in

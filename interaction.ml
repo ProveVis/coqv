@@ -92,7 +92,54 @@ let response_goals msg =
     | Good (Some goals) -> begin
             printf "focused goals number: %d,";
             Doc_model.raise_cache ();
-            
+            begin
+                match !Cmc.current_cmd_type with
+                | Module modul_name -> moduls := (create_module modul_name) :: !moduls
+                | End modul_name -> closing_modul modul_name
+                | Proof (thm_name, kind) -> 
+                    let goal = List.hd (goals.fg_goals) in
+                    let label = goal_to_label goal in
+                    let rec node : node = {
+                        id = goal.goal_id;
+                        label = label;
+                        state = Chosen;
+                        parent = node;
+                    } in
+                    let proof_tree = new_proof_tree node in
+                    let session = new_session thm_name kind Processing proof_tree in
+                    current_session_id := Some thm_name;
+                    add_session_to_modul (List.hd !moduls) session;
+                    History.record_step !Runtime.new_stateid (Add_node node.id)
+                | Qed -> ()
+                | Other -> 
+                    let fg_goals = goals.fg_goals in
+                    let new_nodes = List.map (fun g -> goal_to_label g) fg_goals in
+                    if List.length new_nodes = 0 then begin
+                        let chosen_node = select_chosen_node () in
+                        match chosen_node with
+                        | None -> print_endline "No focus node, maybe the proof tree is complete"
+                        | Some cnode -> 
+                            History.record_step !Runtime.new_stateid (Change_state (cnode.id, cnode.state));
+                            change_node_state cnode.id Proved
+                    end else begin
+                        let node, other_nodes = List.hd new_nodes, List.tl new_nodes in
+                        let chosen_node = select_chosen_node () in
+                        match chosen_node with
+                        | None -> print_endline "No focus node, maybe the proof tree is complete"
+                        | Some cnode -> 
+                            List.iter (fun n ->
+                                if not (node_exists n.id) then begin
+                                    add_edge cnode n (snd (List.hd !Doc_model.doc));
+                                    History.record_step !Runtime.new_stateid (Add_node n.id);
+                                    History.record_step !Runtime.new_stateid (Change_state (cnode.id, cnode.state));
+                                    cnode.state <- Not_proved;
+                                    n.state <- To_be_chosen;
+                                end
+                            ) new_nodes;
+                            History.record_step !Runtime.new_stateid (Change_state (node.state));
+                            node.state <- Chosen
+                    end
+            end
         end
     | Fail -> Doc_model.clear_cache ()
 
@@ -159,19 +206,27 @@ let response_query msg =
     | Good query -> print_endline query
     | _ -> printf "unknown from response query\n"; flush stdout
 
-
-
-let request_evars cout = 
+let request_evars () = 
+    let cout = Runtime.coq_channels.cout in
     request_mode := Request_evars;
     let evars = Xmlprotocol.evars () in
     let xml_evars = Xmlprotocol.of_call evars in
     Xml_printer.print (Xml_printer.TChannel cout) xml_evars
 
-let request_hints cout = 
+let response_evars msg =
+    print_endline "response evars, not finished."
+
+let request_hints () = 
+    let cout = Runtime.coq_channels.cout in
     request_mode := Request_hints;
     let hints = Xmlprotocol.hints () in
     let xml_hints = Xmlprotocol.of_call hints in
     Xml_printer.print (Xml_printer.TChannel cout) xml_hints
+
+let response_hints msg =
+    print_endline "response hints, not finished."
+
+
 
 (*************************************************************************************)
 let interpret_feedback xml_fb = 
