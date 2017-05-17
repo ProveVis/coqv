@@ -16,6 +16,15 @@ type message_level =
   | Warning
   | Error
 
+(*modified by Jian Liu*)
+let str_message_level levl = 
+  match levl with
+  | Debug str -> "Debug "^str
+  | Info -> "Info"
+  | Notice -> "Notice"
+  | Warning -> "Warning"
+  | Error -> "Error" 
+
 type message = {
   message_level : message_level;
   message_content : string;
