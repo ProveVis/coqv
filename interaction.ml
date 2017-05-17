@@ -416,7 +416,7 @@ let handle_input input_str cout =
 let handle_answer feedback = 
     let fb_str = Str.global_replace (ignored_re ()) "" feedback in
     printf "got feedback message length: %d\n" (String.length fb_str);
-    printf "%s\n\n" fb_str;
+    printf "received: %s\n\n" fb_str;
     if not !Flags.xml then begin
         printf "%s\n" fb_str
     end else begin
@@ -429,9 +429,11 @@ let handle_answer feedback =
             print_endline "";
             flush stdout
         | None -> 
-            if Xmlprotocol.is_feedback xml_fb then
+            if Xmlprotocol.is_feedback xml_fb then begin
+                print_endline "printing xml:";
+                print_xml stdout xml_fb;
                 (interpret_feedback xml_fb)
-            else begin
+            end else begin
                 match !request_mode with
                 | Request_about ->      response_coq_info (Xmlprotocol.to_answer (Xmlprotocol.About ()) xml_fb)
                 | Request_init ->       response_init (Xmlprotocol.to_answer (Xmlprotocol.init None) xml_fb)
