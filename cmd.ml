@@ -1,4 +1,4 @@
-
+open Types
 
 let escaped_str str = 
     let buffer = Bytes.create 1024 in
@@ -37,7 +37,7 @@ let current_cmd_type = ref Other
 
 let get_cmd_type cmd =
     let tcmd = String.trim cmd in
-    let splited = Str.split (Str.regexp "[ \t<:\.]+") tcmd in
+    let splited = Str.split (Str.regexp "[ \t<:\\.]+") tcmd in
     match splited with
     | "Module" :: tl_split -> 
         if List.hd (List.tl splited) <> "Type" then

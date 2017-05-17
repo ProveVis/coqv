@@ -49,7 +49,7 @@ let json_of_msg (msg:message) =
             ("type", `Int 0);
             ("content", `String "New_node");
             ("node_id", `String n.id);
-            ("node_label", `String n.label);
+            ("node_label", `String (str_label n.label));
             ("node_state", `String (str_node_state n.state))
         ]
     | New_edge (from_id, to_id) -> 

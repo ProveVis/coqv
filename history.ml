@@ -8,7 +8,7 @@ type step =
 
 type history = (Stateid.t * (step list)) list
 
-let history = ref [] 
+let history : history ref = ref [] 
 
 let record_step stateid step =
     let sid, steps = List.hd !history in

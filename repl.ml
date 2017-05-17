@@ -24,7 +24,7 @@ let worker cin =
             (*printf "%s" (Str.global_replace (ignored_re ()) "" output_str);
             flush stdout*)
             if(len <> 0) then
-                handle_feedback output_str
+                handle_answer output_str
         end;
         Condition.signal read_write_condition
         (*;

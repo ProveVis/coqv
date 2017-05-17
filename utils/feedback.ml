@@ -14,6 +14,15 @@ type level =
   | Notice
   | Warning
   | Error
+  
+(*added by Jian Liu*)
+let str_feedback_level levl = 
+  match levl with
+  | Debug -> "Debug"
+  | Info -> "Info"
+  | Notice -> "Notice"
+  | Warning -> "Warning"
+  | Error -> "Error"
 
 type edit_id = int
 type state_id = Stateid.t

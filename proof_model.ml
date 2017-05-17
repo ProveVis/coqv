@@ -20,7 +20,7 @@ let new_proof_tree node =
         root = node;
         nodes = begin 
                 let ht = Hashtbl.create 1 in
-                Hashtbl.add node.id node;
+                Hashtbl.add ht node.id node;
                 ht
             end;
         edges = Hashtbl.create 1;
@@ -73,16 +73,16 @@ let select_chosen_node () =
     let focused = ref None in
     let proof_tree = current_proof_tree () in
     let tmp_node_queue = Queue.create () in
-    Queue.push proof_tree.root;
+    Queue.push proof_tree.root tmp_node_queue;
     let flag = ref true in
     while !flag && not (Queue.is_empty tmp_node_queue) do
         let node = Queue.pop tmp_node_queue in
-        if node.state = Chosen then begin
+        if node.state = Types.Chosen then begin
             focused := Some node;
             flag := false    
         end else 
-            let _, children_id = Hashtbl.find proof_tree.edges nid in
-            List.iter (fun cid -> Queue.push tmp_node_queue (Hashtbl.find proof_tree.nodes cid)) children_id
+            let _, children_id = Hashtbl.find proof_tree.edges node.id in
+            List.iter (fun cid -> Queue.push (Hashtbl.find proof_tree.nodes cid) tmp_node_queue) children_id
     done;
     !focused
 
@@ -122,7 +122,7 @@ let is_children_complete proof_tree nodeid =
 let change_node_state nid state = 
     let proof_tree = current_proof_tree () in
     let tmp_node_queue = Queue.create () in
-    Queue.push proof_tree.root;
+    Queue.push proof_tree.root tmp_node_queue;
     let flag = ref true in
     while !flag && not (Queue.is_empty tmp_node_queue) do
         let node = Queue.pop tmp_node_queue in
@@ -139,7 +139,7 @@ let change_node_state nid state =
             flag := false
         end else begin
             let _, children_id = Hashtbl.find proof_tree.edges nid in
-            List.iter (fun cid ->Queue.push tmp_node_queue (Hashtbl.find proof_tree.nodes cid)) children_id
+            List.iter (fun cid -> Queue.push (Hashtbl.find proof_tree.nodes cid) tmp_node_queue) children_id
         end 
     done
 
@@ -147,17 +147,17 @@ let remove_node nid =
     let proof_tree = current_proof_tree () in
     assert (nid <> proof_tree.root.id);
     let tmp_node_queue = Queue.create () in
-    Queue.push proof_tree.root;
-    while not Queue.is_empty tmp_node_queue do
+    Queue.push proof_tree.root tmp_node_queue;
+    while not (Queue.is_empty tmp_node_queue) do
         let node = Queue.pop tmp_node_queue in
         Hashtbl.remove proof_tree.nodes node.id;
         let _, children_id = Hashtbl.find proof_tree.edges nid in
-        List.iter (fun cid ->Queue.push tmp_node_queue (Hashtbl.find proof_tree.nodes cid)) children_id;
+        List.iter (fun cid -> Queue.push (Hashtbl.find proof_tree.nodes cid) tmp_node_queue) children_id;
         Hashtbl.remove proof_tree.edges node.id
     done
 
 let print_label node = 
-    printf "%s\n" node.label;
+    printf "%s\n" (str_label node.label);
     flush stdout
 
 
@@ -166,11 +166,11 @@ let add_edge from_node to_node tatic =
     if from_node.id = to_node.id then ();
     if Hashtbl.mem proof_tree.nodes from_node.id then begin
         to_node.parent <- from_node;
-        if not Hashtbl.mem proof_tree.nodes to_node.id then
+        if not (Hashtbl.mem proof_tree.nodes to_node.id) then
             Hashtbl.add proof_tree.nodes to_node.id to_node;
         if Hashtbl.mem proof_tree.edges from_node.id then begin
             let (t, nl) = Hashtbl.find proof_tree.edges from_node.id in
-            if not List.mem to_node.id nl then
+            if not (List.mem to_node.id nl) then
                 Hashtbl.replace proof_tree.edges from_node.id (t, to_node.id :: nl)
         end else begin
             Hashtbl.add proof_tree.edges from_node.id (tatic, [to_node.id])    
@@ -188,5 +188,5 @@ let new_session sname skind sstate proof_tree =
         proof_tree = proof_tree;
     }
 
-let add_session_to_modul modul session = 
-    Hashtbl.add modul.sessions session
+let add_session_to_modul modul (session : session) = 
+    Hashtbl.add modul.sessions session.name session
