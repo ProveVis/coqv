@@ -17,7 +17,7 @@ let of_int id =
   (* Coqide too to parse ids too, but cannot check if they are valid.
    * Hence we check for validity only if we are an ide slave. *)
   (*if !Flags.ide_slave then *) (*modified by Jian Liu*)
-  assert (in_range id);
+  (*assert (in_range id);*) (*modified by Jian Liu*)
   id
 let to_int id = id
 let newer_than id1 id2 = id1 > id2

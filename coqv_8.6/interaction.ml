@@ -188,7 +188,7 @@ let response_goals msg =
     | Fail _ -> Doc_model.clear_cache ()
 
 let request_add cmd editid stateid verbose = 
-    let ecmd = escaped_str cmd in
+    let ecmd = cmd in
     let cout = Runtime.coq_channels.cout in
     request_mode := Request_add;
     let add = Xmlprotocol.add ((ecmd, editid), (stateid, verbose)) in
@@ -409,7 +409,7 @@ let handle_input input_str cout =
     output_string stdout (input_str^"\n");
     Cmd.current_cmd_type := Cmd.get_cmd_type input_str;
     request_mode := Request_init;
-    request_add (Cmd.escaped_str input_str) (-1) !Runtime.new_stateid true;
+    request_add (input_str) (-1) !Runtime.new_stateid true;
     flush stdout
 
 
