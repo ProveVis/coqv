@@ -10,6 +10,7 @@ open Feedback
 open Util
 open Stateid
 open CSig
+(*open Pp*)
 (*open Parser*)
 
 type request_mode = 
@@ -418,18 +419,15 @@ let handle_answer feedback =
     end else begin
         let xparser = Xml_parser.make (Xml_parser.SString fb_str) in
         let xml_fb = Xml_parser.parse xparser in
-        match Xmlprotocol.is_message xml_fb with
-        | Some (level, loc, content) ->
-            printf "%s: " (str_feedback_level level);
-            print_xml stdout content;
-            print_endline "";
+        if Feedback.is_message xml_fb then begin
+            let message = Feedback.to_message xml_fb in
+            printf "%s: %s\n" (str_message_level message.message_level) message.message_content;
             flush stdout
-        | None -> 
-            if Xmlprotocol.is_feedback xml_fb then begin
-                print_endline "printing xml:";
-                print_xml stdout xml_fb;
-                (interpret_feedback xml_fb)
-            end else begin
+        end else if Feedback.is_feedback xml_fb then begin
+            (*print_endline "printing xml:";
+            print_xml stdout xml_fb;*)
+            interpret_feedback xml_fb
+        end else begin
                 match !request_mode with
                 | Request_about ->      response_coq_info (Xmlprotocol.to_answer (Xmlprotocol.About ()) xml_fb)
                 | Request_init ->       response_init (Xmlprotocol.to_answer (Xmlprotocol.init None) xml_fb)

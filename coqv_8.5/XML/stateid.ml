@@ -24,7 +24,7 @@ let of_xml = function
       let id = int_of_string i in
       (* Coqide too to parse ids too, but cannot check if they are valid.
        * Hence we check for validity only if we are an ide slave. *)
-      assert(in_range id); (*modified by Jian Liu*)
+      (*assert(in_range id);*) (*modified by Jian Liu*)
       id
   | _ -> raise (Invalid_argument "to_state_id")
 let to_xml i = Element ("state_id",["val",string_of_int i],[])

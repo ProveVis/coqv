@@ -121,7 +121,7 @@ type block_type =
   | Pp_vbox of int
   | Pp_hvbox of int
   | Pp_hovbox of int
-  | Pp_tbox
+  (*| Pp_tbox*)
 
 type str_token =
 | Str_def of string
@@ -131,14 +131,14 @@ type 'a ppcmd_token =
   | Ppcmd_print of 'a
   | Ppcmd_box of block_type * ('a ppcmd_token Glue.t)
   | Ppcmd_print_break of int * int
-  | Ppcmd_set_tab
-  | Ppcmd_print_tbreak of int * int
+  (*| Ppcmd_set_tab*)
+  (*| Ppcmd_print_tbreak of int * int*)
   | Ppcmd_white_space of int
   | Ppcmd_force_newline
   | Ppcmd_print_if_broken
   | Ppcmd_open_box of block_type
   | Ppcmd_close_box
-  | Ppcmd_close_tbox
+  (*| Ppcmd_close_tbox*)
   | Ppcmd_comment of int
   | Ppcmd_open_tag of Tag.t
   | Ppcmd_close_tag
@@ -200,8 +200,8 @@ let utf8_length s =
 let str s = Glue.atom(Ppcmd_print (Str_def s))
 let stras (i, s) = Glue.atom(Ppcmd_print (Str_len (s, i)))
 let brk (a,b) = Glue.atom(Ppcmd_print_break (a,b))
-let tbrk (a,b) = Glue.atom(Ppcmd_print_tbreak (a,b))
-let tab () = Glue.atom(Ppcmd_set_tab)
+(*let tbrk (a,b) = Glue.atom(Ppcmd_print_tbreak (a,b))*)
+(*let tab () = Glue.atom(Ppcmd_set_tab)*)
 let fnl () = Glue.atom(Ppcmd_force_newline)
 let pifb () = Glue.atom(Ppcmd_print_if_broken)
 let ws n = Glue.atom(Ppcmd_white_space n)
@@ -232,16 +232,16 @@ let h n s = Glue.atom(Ppcmd_box(Pp_hbox n,s))
 let v n s = Glue.atom(Ppcmd_box(Pp_vbox n,s))
 let hv n s = Glue.atom(Ppcmd_box(Pp_hvbox n,s))
 let hov n s = Glue.atom(Ppcmd_box(Pp_hovbox n,s))
-let t s = Glue.atom(Ppcmd_box(Pp_tbox,s))
+(*let t s = Glue.atom(Ppcmd_box(Pp_tbox,s))*)
 
 (* Opening and closing of boxes *)
 let hb n = Glue.atom(Ppcmd_open_box(Pp_hbox n))
 let vb n = Glue.atom(Ppcmd_open_box(Pp_vbox n))
 let hvb n = Glue.atom(Ppcmd_open_box(Pp_hvbox n))
 let hovb n = Glue.atom(Ppcmd_open_box(Pp_hovbox n))
-let tb () = Glue.atom(Ppcmd_open_box Pp_tbox)
+(*let tb () = Glue.atom(Ppcmd_open_box Pp_tbox)*)
 let close () = Glue.atom(Ppcmd_close_box)
-let tclose () = Glue.atom(Ppcmd_close_tbox)
+(*let tclose () = Glue.atom(Ppcmd_close_tbox)*)
 
 (* Opening and closed of tags *)
 let open_tag t = Glue.atom(Ppcmd_open_tag t)
@@ -278,7 +278,7 @@ let rec pr_com ft s =
       let n = String.index s '\n' in
       String.sub s 0 n, Some (String.sub s (n+1) (String.length s - n - 1))
     with Not_found -> s,None in
-  com_if ft (Lazy.lazy_from_val());
+  com_if ft (Lazy.from_val());
 (*  let s1 =
     if String.length s1 <> 0 && s1.[0] = ' ' then
       (Format.pp_print_space ft (); String.sub s1 1 (String.length s1 - 1))
@@ -300,36 +300,36 @@ let pp_dirs ?pp_tag ft =
     | Pp_vbox n   -> Format.pp_open_vbox ft n
     | Pp_hvbox n  -> Format.pp_open_hvbox ft n
     | Pp_hovbox n -> Format.pp_open_hovbox ft n
-    | Pp_tbox     -> Format.pp_open_tbox ft ()
+    (*| Pp_tbox     -> Format.pp_open_tbox ft ()*)
   in
   let rec pp_cmd = function
     | Ppcmd_print tok         ->
         begin match tok with
         | Str_def s ->
           let n = utf8_length s in
-          com_if ft (Lazy.lazy_from_val()); Format.pp_print_as ft n s
+          com_if ft (Lazy.from_val()); Format.pp_print_as ft n s
         | Str_len (s, n) ->
-          com_if ft (Lazy.lazy_from_val()); Format.pp_print_as ft n s
+          com_if ft (Lazy.from_val()); Format.pp_print_as ft n s
         end
     | Ppcmd_box(bty,ss)       -> (* Prevent evaluation of the stream! *)
-        com_if ft (Lazy.lazy_from_val());
+        com_if ft (Lazy.from_val());
         pp_open_box bty ;
         if not (Format.over_max_boxes ()) then Glue.iter pp_cmd ss;
         Format.pp_close_box ft ()
-    | Ppcmd_open_box bty      -> com_if ft (Lazy.lazy_from_val()); pp_open_box bty
+    | Ppcmd_open_box bty      -> com_if ft (Lazy.from_val()); pp_open_box bty
     | Ppcmd_close_box         -> Format.pp_close_box ft ()
-    | Ppcmd_close_tbox        -> Format.pp_close_tbox ft ()
+    (*| Ppcmd_close_tbox        -> Format.pp_close_tbox ft ()*)
     | Ppcmd_white_space n     ->
-        com_if ft (Lazy.lazy_from_fun (fun()->Format.pp_print_break ft n 0))
+        com_if ft (Lazy.from_fun (fun()->Format.pp_print_break ft n 0))
     | Ppcmd_print_break(m,n)  ->
-        com_if ft (Lazy.lazy_from_fun(fun()->Format.pp_print_break ft m n))
-    | Ppcmd_set_tab           -> Format.pp_set_tab ft ()
-    | Ppcmd_print_tbreak(m,n) ->
-        com_if ft (Lazy.lazy_from_fun(fun()->Format.pp_print_tbreak ft m n))
+        com_if ft (Lazy.from_fun(fun()->Format.pp_print_break ft m n))
+    (*| Ppcmd_set_tab           -> Format.pp_set_tab ft ()*)
+    (*| Ppcmd_print_tbreak(m,n) ->
+        com_if ft (Lazy.from_fun(fun()->Format.pp_print_tbreak ft m n))*)
     | Ppcmd_force_newline     ->
         com_brk ft; Format.pp_force_newline ft ()
     | Ppcmd_print_if_broken   ->
-        com_if ft (Lazy.lazy_from_fun(fun()->Format.pp_print_if_newline ft ()))
+        com_if ft (Lazy.from_fun(fun()->Format.pp_print_if_newline ft ()))
     | Ppcmd_comment i         ->
         let coms = split_com [] [] i !comments in
 (*        Format.pp_open_hvbox ft 0;*)

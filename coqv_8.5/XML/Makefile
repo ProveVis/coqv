@@ -26,7 +26,7 @@ xml:
 	ocamlc -c xmlprotocol.ml
 	ocamlc -thread -a -o xml.cma threads.cma xml_datatype.mli xml_lexer.cmo xml_parser.cmo xml_printer.cmo \
 	 option.cmo cSig.mli store.cmo exninfo.cmo loc.cmo serialize.cmo stateid.cmo \
-	 util.cmo feedback.cmo interface.mli pp_control.cmo backtrace.cmo terminal.cmo ppstyle.cmo pp.cmo errors.cmo dyn.cmo \
+	 util.cmo feedback.cmo interface.mli pp_control.cmo backtrace.cmo pp.cmo terminal.cmo ppstyle.cmo errors.cmo dyn.cmo \
 	 richpp.cmo xmlprotocol.cmo
 
 
