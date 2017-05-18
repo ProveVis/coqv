@@ -95,7 +95,9 @@ let of_stateid i = Element ("state_id",["val",string_of_int (Stateid.to_int i)],
 let of_richpp x = Element ("richpp", [], [Richpp.repr x])
 let to_richpp xml = match xml with
   | Element ("richpp", [], [x]) -> Richpp.richpp_of_xml x
-  | x -> raise Serialize.(Marshal_error("richpp",x))
+  | x -> 
+    print_endline ("cannot convert to richpp: "^(Xml_printer.to_string_fmt x));
+    raise Serialize.(Marshal_error("richpp",x))
 
 let of_value f = function
 | Good x -> Element ("value", ["val", "good"], [f x])

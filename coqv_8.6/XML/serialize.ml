@@ -70,7 +70,9 @@ let to_option (f : xml -> 'a) : xml -> 'a option = function
 let of_string (s : string) : xml = Element ("string", [], [PCData s])
 let to_string : xml -> string = function
   | Element ("string", [], l) -> raw_string l
-  | x -> raise (Marshal_error("string",x))
+  | x -> 
+    print_endline ("cannot convert to string: "^(Xml_printer.to_string_fmt x));
+    raise (Marshal_error("string",x))
 
 let of_int (i : int) : xml = Element ("int", [], [PCData (string_of_int i)])
 let to_int : xml -> int = function

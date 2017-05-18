@@ -24,8 +24,21 @@ type request_mode =
 
 let request_mode = ref Request_about 
 
+let richpp_to_string richpp = 
+    let repr = richpp in
+    match repr with
+    | Xml_datatype.Element ("_", [] , [Xml_datatype.PCData str_repr]) ->
+        let str1 = Str.global_replace (Str.regexp "<constr\\.reference>") "" str_repr in
+        let str2 = Str.global_replace (Str.regexp "</constr\\.reference>") "" str1 in
+        let str3 = Str.global_replace (Str.regexp "<constr\\.notation>") "" str2 in
+        let str4 = Str.global_replace (Str.regexp "</constr\\.notation>") "" str3 in
+        str4
+    | _ -> print_endline "convert from richpp to string error"; exit 1
+
 let goal_to_label goal = 
-    let raw_hyp_list = List.map (fun h -> Serialize.to_string h) goal.goal_hyp in
+    let raw_hyp_list = List.map (fun h -> 
+        (*printf "goal: \n%s\n" (Xml_printer.to_string_fmt h);*)
+        richpp_to_string h) goal.goal_hyp in
         (*Serialize.to_list Serialize.to_string goal.goal_hyp in*)
         (*List.map (fun h -> Serialize.to_list Serialize.to_string h) goal.goal_hyp in*)
     let hyp_list = List.map (fun h ->
@@ -34,7 +47,7 @@ let goal_to_label goal =
             let hn, hc = String.sub ch 0 (split_pos), String.sub ch (split_pos+1) (String.length ch - split_pos-1) in
             String.trim hn, String.trim hc 
         ) raw_hyp_list in
-    let conc = String.trim (caught_str (Serialize.to_string goal.goal_ccl)) in
+    let conc = String.trim (caught_str (richpp_to_string goal.goal_ccl)) in
     {
         id = goal.goal_id;
         hypos = hyp_list;
@@ -160,32 +173,11 @@ let response_goals msg =
                             History.record_step !Runtime.new_stateid (Change_state (node.id, node.state));
                             node.state <- Chosen   
                         end
-                    (*if List.length new_nodes = 0 then begin
-                        match chosen_node with
-                        | None -> print_endline "No focus node, maybe the proof tree is complete"
-                        | Some cnode -> 
-                            History.record_step !Runtime.new_stateid (Change_state (cnode.id, cnode.state));
-                            change_node_state cnode.id Proved
-                    end else begin
-                        let node, other_nodes = List.hd new_nodes, List.tl new_nodes in
-                        match chosen_node with
-                        | None -> print_endline "No focus node, maybe the proof tree is complete"
-                        | Some cnode -> 
-                            List.iter (fun n ->
-                                if not (node_exists n.id) then begin
-                                    add_edge cnode n (snd (List.hd !Doc_model.doc));
-                                    History.record_step !Runtime.new_stateid (Add_node n.id);
-                                    History.record_step !Runtime.new_stateid (Change_state (cnode.id, cnode.state));
-                                    cnode.state <- Not_proved;
-                                    n.state <- To_be_chosen;
-                                end
-                            ) new_nodes;
-                            History.record_step !Runtime.new_stateid (Change_state (node.state));
-                            node.state <- Chosen
-                    end*)
             end
         end
-    | Fail _ -> Doc_model.clear_cache ()
+    | Fail _ -> 
+        print_endline "fail to get goals";
+        Doc_model.clear_cache ()
 
 let request_add cmd editid stateid verbose = 
     let ecmd = cmd in
@@ -415,8 +407,8 @@ let handle_input input_str cout =
 
 let handle_answer feedback = 
     let fb_str = Str.global_replace (ignored_re ()) "" feedback in
-    printf "got feedback message length: %d\n" (String.length fb_str);
-    printf "received: %s\n\n" fb_str;
+    (*printf "got feedback message length: %d\n" (String.length fb_str);
+    printf "received: %s\n\n" fb_str;*)
     if not !Flags.xml then begin
         printf "%s\n" fb_str
     end else begin
@@ -430,16 +422,20 @@ let handle_answer feedback =
             flush stdout
         | None -> 
             if Xmlprotocol.is_feedback xml_fb then begin
-                print_endline "printing xml:";
-                print_xml stdout xml_fb;
+                (*print_endline "printing xml:";
+                print_xml stdout xml_fb;*)
                 (interpret_feedback xml_fb)
             end else begin
                 match !request_mode with
                 | Request_about ->      response_coq_info (Xmlprotocol.to_answer (Xmlprotocol.About ()) xml_fb)
-                | Request_init ->       response_init (Xmlprotocol.to_answer (Xmlprotocol.init None) xml_fb)
+                | Request_init ->       
+                    response_init (Xmlprotocol.to_answer (Xmlprotocol.init None) xml_fb);
+                    Runtime.listening_to_coqtop := true
                 | Request_edit_at stateid -> response_edit_at (Xmlprotocol.to_answer (Xmlprotocol.edit_at 0) xml_fb) stateid
                 | Request_query ->      response_query (Xmlprotocol.to_answer (Xmlprotocol.query ("", 0)) xml_fb)
-                | Request_goals ->      response_goals (Xmlprotocol.to_answer (Xmlprotocol.goals ()) xml_fb)
+                | Request_goals ->      
+                    response_goals (Xmlprotocol.to_answer (Xmlprotocol.goals ()) xml_fb);
+                    Runtime.listening_to_coqtop := true
                 | Request_evars ->      response_evars (Xmlprotocol.to_answer (Xmlprotocol.evars ()) xml_fb)
                 | Request_hints ->      response_hints (Xmlprotocol.to_answer (Xmlprotocol.hints ()) xml_fb)
                 | Request_status ->     response_status (Xmlprotocol.to_answer (Xmlprotocol.status true) xml_fb)
@@ -448,7 +444,9 @@ let handle_answer feedback =
                 | Request_setoptions -> response_setoptions (Xmlprotocol.to_answer (Xmlprotocol.set_options []) xml_fb)
                 | Request_mkcases ->    response_mkcases (Xmlprotocol.to_answer (Xmlprotocol.mkcases "") xml_fb)
                 | Request_quit ->       response_quit (Xmlprotocol.to_answer (Xmlprotocol.quit ()) xml_fb)
-                | Request_add ->        response_add (Xmlprotocol.to_answer (Xmlprotocol.add (("",0),(0,true))) xml_fb)
+                | Request_add ->        
+                    response_add (Xmlprotocol.to_answer (Xmlprotocol.add (("",0),(0,true))) xml_fb);
+                    Runtime.listening_to_coqtop := false
                 | Request_interp ->     response_interp (Xmlprotocol.to_answer (Xmlprotocol.interp ((true, true),"")) xml_fb)
                 | Request_stopworker -> response_stopworker (Xmlprotocol.to_answer (Xmlprotocol.stop_worker "") xml_fb)
                 | Request_printast ->   response_printast (Xmlprotocol.to_answer (Xmlprotocol.print_ast 0) xml_fb)

@@ -27,7 +27,8 @@ let worker cin =
                 handle_answer output_str;
             flush stdout
         end;
-        Condition.signal read_write_condition
+        if !Runtime.listening_to_coqtop then 
+            Condition.signal read_write_condition
         (*;
         print_endline "received a feedback"*)
     done
