@@ -28,6 +28,10 @@ let _ =
     let init = Xmlprotocol.Init None in
     let xml_init = Xmlprotocol.of_call init in
     Xml_printer.print (Xml_printer.TChannel stdout) xml_init;
-    print_endline ""
+    print_endline "";
+    let fb_parser = Xml_parser.make (Xml_parser.SString "<feedback object=\"state\" route=\"0\"><state_id val=\"6\"/><feedback_content val=\"processingin\"><string>master</string></feedback_content></feedback><feedback object=\"state\" route=\"0\"><state_id val=\"5\"/><feedback_content val=\"processed\"/></feedback><feedback object=\"state\" route=\"0\"><state_id val=\"6\"/><feedback_content val=\"processed\"/></feedback><value val=\"good\"><option val=\"some\"><goals><list/><list/><list/><list/></goals></option></value>") in
+    let xml_fb = Xml_parser.parse fb_parser in
+    Xml_printer.print (Xml_printer.TChannel stdout) xml_fb;
+    print_endline ("\nis xml_fb is feedback: "^(string_of_bool (Xmlprotocol.is_feedback xml_fb)))
 
 

@@ -1,6 +1,6 @@
 all: 
 	ocamlfind ocamlc -I XML -thread -o coqv -package yojson -linkpkg -g str.cma threads.cma xml.cma \
-	 flags.ml types.ml communicate.ml runtime.ml cmd.ml doc_model.ml proof_model.ml history.ml interaction.ml repl.ml
+	 flags.ml types.ml communicate.ml runtime.ml cmd.ml doc_model.ml proof_model.ml history.ml status.ml interaction.ml repl.ml
 
 xml:
 	make -C XML xml

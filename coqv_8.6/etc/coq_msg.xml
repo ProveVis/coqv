@@ -138,6 +138,20 @@
         </pair>
     </pair>
 </value>
+
+<call val="Add">
+    <pair>
+        <pair>
+            <string>Lemma test: P-&gt;P.</string>
+            <int>-1</int>
+        </pair>
+        <pair>
+            <state_id val="2"/>
+            <bool val="true"/>
+        </pair>
+    </pair>
+</call>
+
 <saperate>---------------------------------------------------------------------</saperate>
 
 
@@ -322,6 +336,19 @@
         </pair>
     </pair>
 </value>
+
+<call val="Add">
+    <pair>
+        <pair>
+            <string>assumption.</string>
+            <int>-1</int>
+        </pair>
+        <pair>
+            <state_id val="5"/>
+            <bool val="true"/>
+        </pair>
+    </pair>
+</call>
 <saperate>---------------------------------------------------------------------</saperate>
 
 <call val="Goal">

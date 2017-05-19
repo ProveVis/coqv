@@ -13,7 +13,7 @@ open CSig
 (*open Parser*)
 
 type request_mode = 
-      Request_add           
+      Request_add of string    
     | Request_edit_at of Stateid.t
     | Request_query     
     | Request_goals
@@ -24,8 +24,9 @@ type request_mode =
 
 let request_mode = ref Request_about 
 
-let richpp_to_string richpp = 
-    let repr = richpp in
+let rec richpp_to_string richpp = 
+    Richpp.raw_print richpp
+    (*let repr = richpp in
     match repr with
     | Xml_datatype.Element ("_", [] , [Xml_datatype.PCData str_repr]) ->
         let str1 = Str.global_replace (Str.regexp "<constr\\.reference>") "" str_repr in
@@ -33,7 +34,11 @@ let richpp_to_string richpp =
         let str3 = Str.global_replace (Str.regexp "<constr\\.notation>") "" str2 in
         let str4 = Str.global_replace (Str.regexp "</constr\\.notation>") "" str3 in
         str4
-    | _ -> print_endline "convert from richpp to string error"; exit 1
+    | Xml_datatype.Element (_, _, [x]) -> richpp_to_string x
+    | x -> 
+        print_endline "convert from richpp to string error"; 
+        print_endline (Xml_printer.to_string_fmt x);
+        exit 1*)
 
 let goal_to_label goal = 
     let raw_hyp_list = List.map (fun h -> 
@@ -114,20 +119,22 @@ let request_goals () =
     Xml_printer.print (Xml_printer.TChannel cout) xml_goals
 
 let response_goals msg =
+    print_endline "received response from goals.................";
     match msg with
     | Good None -> 
-        print_endline "no more goals";
-        Doc_model.raise_cache ()
+        print_endline "**************no more goals****************"
     | Good (Some goals) -> begin
             printf "focused goals number: %d," (List.length (goals.fg_goals));
-            Doc_model.raise_cache ();
+            (*Doc_model.raise_cache ();*)
             begin
                 match !Cmd.current_cmd_type with
                 | Module modul_name -> moduls := (create_module modul_name) :: !moduls
                 | End modul_name -> closing_modul modul_name
                 | Proof (thm_name, kind) -> 
+                    assert(List.length goals.fg_goals <> 0);
                     let goal = List.hd (goals.fg_goals) in
                     let label = goal_to_label goal in
+                    (*print_endline label.id;*)
                     let rec node : node = {
                         id = goal.goal_id;
                         label = label;
@@ -137,13 +144,18 @@ let response_goals msg =
                     let proof_tree = new_proof_tree node in
                     let session = new_session thm_name kind Processing proof_tree in
                     current_session_id := Some thm_name;
+                    printf "current session id: %s\n" thm_name;
+                    flush stdout;
+                    assert(List.length !moduls > 0);
                     add_session_to_modul (List.hd !moduls) session;
-                    History.record_step !Runtime.new_stateid (Add_node node.id)
-                | Qed -> ()
+                    printf "%d moduls at the moment\n" (List.length !moduls);
+                    History.record_step !Runtime.new_stateid (Add_node node.id);
+                    print_endline "finished creating session."
+                | Qed -> current_session_id := None
                 | Other -> 
                     let fg_goals = goals.fg_goals in
                     let chosen_node = select_chosen_node () in
-                    match chosen_node with
+                    (match chosen_node with
                     | None -> print_endline "No focus node, maybe the proof tree is complete"
                     | Some cnode -> 
                         let new_nodes : node list = List.map (fun g -> 
@@ -157,56 +169,60 @@ let response_goals msg =
                             History.record_step !Runtime.new_stateid (Change_state (cnode.id, cnode.state));
                             change_node_state cnode.id Proved
                         end else begin
-                             let node, other_nodes = List.hd new_nodes, List.tl new_nodes in
-                        match chosen_node with
-                        | None -> print_endline "No focus node, maybe the proof tree is complete"
-                        | Some cnode -> 
-                            List.iter (fun (n:node) ->
-                                if not (node_exists n.id) then begin
-                                    add_edge cnode n (snd (List.hd !Doc_model.doc));
-                                    History.record_step !Runtime.new_stateid (Add_node n.id);
-                                    History.record_step !Runtime.new_stateid (Change_state (cnode.id, cnode.state));
-                                    cnode.state <- Not_proved;
-                                    n.state <- To_be_chosen;
-                                end
-                            ) new_nodes;
-                            History.record_step !Runtime.new_stateid (Change_state (node.id, node.state));
-                            node.state <- Chosen   
-                        end
+                            let node, other_nodes = List.hd new_nodes, List.tl new_nodes in 
+                            match chosen_node with
+                            | None -> print_endline "No focus node, maybe the proof tree is complete"
+                            | Some cnode -> 
+                                List.iter (fun (n:node) ->
+                                    if not (node_exists n.id) then begin
+                                        assert(List.length !Doc_model.doc <> 0);
+                                        add_edge cnode n (snd (List.hd !Doc_model.doc));
+                                        History.record_step !Runtime.new_stateid (Add_node n.id);
+                                        History.record_step !Runtime.new_stateid (Change_state (cnode.id, cnode.state));
+                                        cnode.state <- Not_proved;
+                                        n.state <- To_be_chosen;
+                                    end
+                                ) new_nodes;
+                                History.record_step !Runtime.new_stateid (Change_state (node.id, node.state));
+                                node.state <- Chosen   
+                        end)
             end
         end
     | Fail _ -> 
-        print_endline "fail to get goals";
-        Doc_model.clear_cache ()
+        print_endline "fail to get goals"
 
 let request_add cmd editid stateid verbose = 
     let ecmd = cmd in
     let cout = Runtime.coq_channels.cout in
-    request_mode := Request_add;
+    request_mode := Request_add cmd;
     let add = Xmlprotocol.add ((ecmd, editid), (stateid, verbose)) in
     let xml_add = Xmlprotocol.of_call add in
     Xml_printer.print (Xml_printer.TChannel cout) xml_add;
     Doc_model.cache := Some (stateid, cmd)
 
-let response_add msg =
+let response_add msg cmd =
     begin
         match msg with
         | Good (stateid, (CSig.Inl (), content)) ->
             printf "new state id: %d, message content: %s\n" stateid content;
             Runtime.new_stateid := stateid;
+            Doc_model.add_to_doc (stateid, cmd);
             flush stdout
         | Good (stateid, (CSig.Inr next_stateid, content)) ->
             printf "finished current proof, move to state id: %d, message content: %s\n" next_stateid content;
             Runtime.new_stateid := next_stateid;
+            Doc_model.add_to_doc (next_stateid, cmd);
             flush stdout
         | Fail (stateid, _, xml_content) -> 
             printf "error add in state id %d, message content: " stateid;
             print_xml stdout xml_content;
             print_endline "";
-            Doc_model.clear_cache ();
+            (*Doc_model.clear_cache ();*)
             flush stdout
     end;
-    request_goals ()
+    Thread.delay 0.001;
+    request_goals ();
+    flush coq_channels.cout
 
 let request_edit_at stateid = 
     let cout = Runtime.coq_channels.cout in
@@ -393,13 +409,19 @@ let interpret_feedback xml_fb =
 
 let interpret_cmd cmd = 
     printf "Interpreting command: %s\n" cmd;
-    if cmd = "init" then
+    match cmd with
+    | "init" -> request_init None
+    | "status" -> print_endline (Status.str_status ())
+    | "history" -> print_endline (History.str_history ())
+    | _ -> print_endline "command not interpreted."
+    (*if cmd = "init" then
         request_init None;
-    flush stdout
+    flush stdout*)
 
 let handle_input input_str cout = 
     output_string stdout (input_str^"\n");
     Cmd.current_cmd_type := Cmd.get_cmd_type input_str;
+    print_endline ("current_cmd_type: "^(Cmd.str_cmd_type !Cmd.current_cmd_type));
     request_mode := Request_init;
     request_add (input_str) (-1) !Runtime.new_stateid true;
     flush stdout
@@ -444,8 +466,8 @@ let handle_answer feedback =
                 | Request_setoptions -> response_setoptions (Xmlprotocol.to_answer (Xmlprotocol.set_options []) xml_fb)
                 | Request_mkcases ->    response_mkcases (Xmlprotocol.to_answer (Xmlprotocol.mkcases "") xml_fb)
                 | Request_quit ->       response_quit (Xmlprotocol.to_answer (Xmlprotocol.quit ()) xml_fb)
-                | Request_add ->        
-                    response_add (Xmlprotocol.to_answer (Xmlprotocol.add (("",0),(0,true))) xml_fb);
+                | Request_add cmd ->        
+                    response_add (Xmlprotocol.to_answer (Xmlprotocol.add (("",0),(0,true))) xml_fb) cmd;
                     Runtime.listening_to_coqtop := false
                 | Request_interp ->     response_interp (Xmlprotocol.to_answer (Xmlprotocol.interp ((true, true),"")) xml_fb)
                 | Request_stopworker -> response_stopworker (Xmlprotocol.to_answer (Xmlprotocol.stop_worker "") xml_fb)

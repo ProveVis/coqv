@@ -24,10 +24,21 @@ let move_focus_to stateid =
         printf "could not focus to command with state id %d in the current doc model.\n" (Stateid.to_int stateid)
     end
 
-let clear_cache () = cache := None
+(*let clear_cache () = cache := None
 
 let raise_cache () = 
     match !cache with
     | Some cc -> add_to_doc cc; clear_cache ()
-    | None -> ()
+    | None -> ()*)
+
+let get_cmd stateid = 
+    let rec find_from_doc doc = 
+        match doc with
+        | [] -> "None"
+        | (sid, cmd) :: doc' -> 
+            if sid = stateid then
+                cmd 
+            else 
+                find_from_doc doc' in
+    find_from_doc !doc
 

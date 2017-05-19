@@ -6,6 +6,7 @@ Two modes of CoqV:
 
 - History needs to be recorded during a session.
 
+20170519: need to split xml string blocks
 
 .
 .

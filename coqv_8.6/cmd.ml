@@ -53,3 +53,11 @@ let get_cmd_type cmd =
     | "Goal" :: tl_split -> Proof ("Unnamed_thm", Goal)
     | "Qed" :: tl_split -> Qed
     | _ -> Other
+
+let str_cmd_type ct = 
+    match ct with
+    | Module mname -> "Module "^mname
+    | End mname -> "End "^mname
+    | Proof (thm_name, pk) -> "Proof "^(str_proof_kind pk)^" "^thm_name
+    | Qed -> "Qed"
+    | Other -> "Other"
