@@ -16,3 +16,41 @@ let str_status () =
         str_history
         str_session
 
+let str_proof_tree sn_path = 
+    let str_sp_list = String.split_on_char '.' (String.trim sn_path) in
+    let sno = find_session str_sp_list in
+    match sno with
+    | None -> 
+        printf "session %s not found." sn_path
+        flush stdout;
+        ""
+    | Some sn -> 
+        let str_buf = ref "" in
+        let node_queue = Queue.create () in
+        let proof_tree = sn.proof_tree in
+        Queue.push proof_tree.root.id node_queue;
+        while not (Queue.is_empty node_queue) do
+            let current_node = Queue.pop node_queue in
+            str_buf := !str_buf ^ current_node;
+            let cmd, clist = Proof_model.children current_node in
+            str_buf := !str_buf ^ "(" ^ cmd ^ ")\t[";
+            List.iter (fun c -> str_buf := !str_buf ^ c ^ " "; Queue.push c) clist;
+            str_buf := !str_buf ^ "]\n";
+        done;
+        !str_buf
+           
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

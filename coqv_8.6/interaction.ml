@@ -122,7 +122,12 @@ let response_goals msg =
     print_endline "received response from goals.................";
     match msg with
     | Good None -> 
-        print_endline "**************no more goals****************"
+        print_endline "**************no more goals****************";
+        begin
+            match !Cmd.current_cmd_type with
+            | Qed -> current_session_id := None
+            | _ -> ()
+        end
     | Good (Some goals) -> begin
             printf "focused goals number: %d," (List.length (goals.fg_goals));
             (*Doc_model.raise_cache ();*)
@@ -166,6 +171,7 @@ let response_goals msg =
                             parent = cnode;
                         }) fg_goals in
                         if List.length new_nodes = 0 then begin
+                            print_endline "No more goals, shall change the focused node into proved.";
                             History.record_step !Runtime.new_stateid (Change_state (cnode.id, cnode.state));
                             change_node_state cnode.id Proved
                         end else begin

@@ -80,9 +80,10 @@ let select_chosen_node () =
         if node.state = Types.Chosen then begin
             focused := Some node;
             flag := false    
-        end else 
+        end else try
             let _, children_id = Hashtbl.find proof_tree.edges node.id in
             List.iter (fun cid -> Queue.push (Hashtbl.find proof_tree.nodes cid) tmp_node_queue) children_id
+        with Not_found -> ()
     done;
     !focused
 
@@ -137,9 +138,10 @@ let change_node_state nid state =
                     change_others other_node.parent in
             change_others node.parent;
             flag := false
-        end else begin
+        end else begin try
             let _, children_id = Hashtbl.find proof_tree.edges nid in
             List.iter (fun cid -> Queue.push (Hashtbl.find proof_tree.nodes cid) tmp_node_queue) children_id
+        with Not_found -> ()
         end 
     done
 
@@ -190,3 +192,18 @@ let new_session sname skind sstate proof_tree =
 
 let add_session_to_modul modul (session : session) = 
     Hashtbl.add modul.sessions session.name session
+
+let find_session sn_path = 
+    let find_in_moduls sp modul = 
+        match sp with
+        | [] -> None
+        | [sname] -> 
+            (try
+                Some (Hashtbl.find modul.sessions sname) 
+            with Not_found -> None)
+        | mname :: sp' -> 
+            (try
+                let next_modul = Hashtbl.find modul.modul_tbl mname in
+                find_in_moduls sp' next_modul
+            with Not_found -> None) in
+    find_in_moduls sn_path !(List.hd moduls)
