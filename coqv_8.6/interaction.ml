@@ -426,11 +426,67 @@ let handle_input input_str cout =
     request_add (input_str) (-1) !Runtime.new_stateid true;
     flush stdout
 
+let other_xml_str xml_str tag = 
+    let xml_str_list = Str.split (Str.regexp tag) xml_str in
+    let prefix_length = String.length (List.nth xml_str_list 0) + String.length tag in
+    let other_str = String.trim (String.sub xml_str prefix_length (String.length xml_str - prefix_length)) in
+    other_str
 
-let handle_answer feedback = 
-    let fb_str = Str.global_replace (ignored_re ()) "" feedback in
+let handle_answer received_str = 
+    let fb_str = Str.global_replace (ignored_re ()) "" received_str in
     (*printf "got feedback message length: %d\n" (String.length fb_str);
     printf "received: %s\n\n" fb_str;*)
+    let handle str = 
+        let xparser = Xml_parser.make (Xml_parser.SString str) in
+        let xml_str = Xml_parser.parse xparser in
+        match Xmlprotocol.is_message xml_str with
+        | Some (level, loc, content) ->
+            printf "%s: " (str_feedback_level level);
+            print_xml stdout content;
+            print_endline "";
+            flush stdout;
+            other_xml_str str "</message>"            
+        | None -> 
+            if Xmlprotocol.is_feedback xml_str then begin
+                interpret_feedback xml_str;
+                other_xml_str str "</feedback>"    
+            end else begin
+                begin
+                    match !request_mode with
+                    | Request_about ->      response_coq_info (Xmlprotocol.to_answer (Xmlprotocol.About ()) xml_str)
+                    | Request_init ->       
+                        response_init (Xmlprotocol.to_answer (Xmlprotocol.init None) xml_str);
+                        Runtime.listening_to_coqtop := true
+                    | Request_edit_at stateid -> response_edit_at (Xmlprotocol.to_answer (Xmlprotocol.edit_at 0) xml_str) stateid
+                    | Request_query ->      response_query (Xmlprotocol.to_answer (Xmlprotocol.query ("", 0)) xml_str)
+                    | Request_goals ->      
+                        response_goals (Xmlprotocol.to_answer (Xmlprotocol.goals ()) xml_str);
+                        Runtime.listening_to_coqtop := true
+                    | Request_evars ->      response_evars (Xmlprotocol.to_answer (Xmlprotocol.evars ()) xml_str)
+                    | Request_hints ->      response_hints (Xmlprotocol.to_answer (Xmlprotocol.hints ()) xml_str)
+                    | Request_status ->     response_status (Xmlprotocol.to_answer (Xmlprotocol.status true) xml_str)
+                    | Request_search ->     response_search (Xmlprotocol.to_answer (Xmlprotocol.search []) xml_str)
+                    | Request_getoptions -> response_getoptions (Xmlprotocol.to_answer (Xmlprotocol.get_options ()) xml_str)
+                    | Request_setoptions -> response_setoptions (Xmlprotocol.to_answer (Xmlprotocol.set_options []) xml_str)
+                    | Request_mkcases ->    response_mkcases (Xmlprotocol.to_answer (Xmlprotocol.mkcases "") xml_str)
+                    | Request_quit ->       response_quit (Xmlprotocol.to_answer (Xmlprotocol.quit ()) xml_str)
+                    | Request_add cmd ->        
+                        response_add (Xmlprotocol.to_answer (Xmlprotocol.add (("",0),(0,true))) xml_str) cmd;
+                        Runtime.listening_to_coqtop := false
+                    | Request_interp ->     response_interp (Xmlprotocol.to_answer (Xmlprotocol.interp ((true, true),"")) xml_str)
+                    | Request_stopworker -> response_stopworker (Xmlprotocol.to_answer (Xmlprotocol.stop_worker "") xml_str)
+                    | Request_printast ->   response_printast (Xmlprotocol.to_answer (Xmlprotocol.print_ast 0) xml_str)
+                    | Request_annotate ->   response_annotate (Xmlprotocol.to_answer (Xmlprotocol.annotate "") xml_str)
+                end;
+                other_xml_str str "</value>"
+            end in
+    let to_be_handled = ref fb_str in
+    while !to_be_handled <> "" do
+        to_be_handled := handle !to_be_handled
+    done
+    
+
+(*
     if not !Flags.xml then begin
         printf "%s\n" fb_str
     end else begin
@@ -474,4 +530,4 @@ let handle_answer feedback =
                 | Request_printast ->   response_printast (Xmlprotocol.to_answer (Xmlprotocol.print_ast 0) xml_fb)
                 | Request_annotate ->   response_annotate (Xmlprotocol.to_answer (Xmlprotocol.annotate "") xml_fb)
             end
-    end
+    end*)

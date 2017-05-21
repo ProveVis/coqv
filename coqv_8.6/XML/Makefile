@@ -28,7 +28,7 @@ xml:
 	 ppstyle.cmo cErrors.cmo richpp.cmo xmlprotocol.cmo
 
 test:
-	ocamlc -thread -o test threads.cma unix.cma xml.cma test_xml.ml
+	ocamlc -thread -o test threads.cma unix.cma xml.cma str.cma test_xml.ml
 
 
 # test:
