@@ -119,17 +119,19 @@ let request_goals () =
     Xml_printer.print (Xml_printer.TChannel cout) xml_goals
 
 let response_goals msg =
-    print_endline "received response from goals.................";
+    (*print_endline "received response from goals.................";*)
     match msg with
     | Good None -> 
         print_endline "**************no more goals****************";
         begin
             match !Cmd.current_cmd_type with
-            | Qed -> current_session_id := None
+            | Qed -> 
+                current_session_id := None;
+                History.record_step !Runtime.new_stateid Dummy
             | _ -> ()
         end
     | Good (Some goals) -> begin
-            printf "focused goals number: %d," (List.length (goals.fg_goals));
+            printf "focused goals number: %d. \n" (List.length (goals.fg_goals));
             (*Doc_model.raise_cache ();*)
             begin
                 match !Cmd.current_cmd_type with
@@ -153,10 +155,12 @@ let response_goals msg =
                     flush stdout;
                     assert(List.length !moduls > 0);
                     add_session_to_modul (List.hd !moduls) session;
-                    printf "%d moduls at the moment\n" (List.length !moduls);
-                    History.record_step !Runtime.new_stateid (Add_node node.id);
-                    print_endline "finished creating session."
-                | Qed -> current_session_id := None
+                    (*printf "%d moduls at the moment\n" (List.length !moduls);*)
+                    History.record_step !Runtime.new_stateid (Add_node node.id)
+                    (*print_endline "finished creating session."*)
+                | Qed -> 
+                    current_session_id := None;
+                    History.record_step !Runtime.new_stateid Dummy
                 | Other -> 
                     let fg_goals = goals.fg_goals in
                     let chosen_node = select_chosen_node () in
@@ -210,12 +214,14 @@ let response_add msg cmd =
     begin
         match msg with
         | Good (stateid, (CSig.Inl (), content)) ->
-            printf "new state id: %d, message content: %s\n" stateid content;
+            if String.trim content <> "" then 
+                printf "new state id: %d, message content: %s\n" stateid content;
             Runtime.new_stateid := stateid;
             Doc_model.add_to_doc (stateid, cmd);
             flush stdout
         | Good (stateid, (CSig.Inr next_stateid, content)) ->
-            printf "finished current proof, move to state id: %d, message content: %s\n" next_stateid content;
+            if String.trim content <> "" then 
+                printf "finished current proof, move to state id: %d, message content: %s\n" next_stateid content;
             Runtime.new_stateid := next_stateid;
             Doc_model.add_to_doc (next_stateid, cmd);
             flush stdout
@@ -226,7 +232,7 @@ let response_add msg cmd =
             (*Doc_model.clear_cache ();*)
             flush stdout
     end;
-    Thread.delay 0.001;
+    (*Thread.delay 0.001;*)
     request_goals ();
     flush coq_channels.cout
 
@@ -388,10 +394,10 @@ let interpret_feedback xml_fb =
     let fb = Xmlprotocol.to_feedback xml_fb in
     begin
         match fb.id with
-        | Edit editid -> printf "editid: %d\n" editid
-        | State stateid -> printf "stateid: %d\n" stateid
+        | Edit editid -> printf "editid: %d, " editid
+        | State stateid -> printf "stateid: %d, " stateid
     end;
-    printf "contents: ";
+    printf "";
     begin
         match fb.contents with 
         | Processed -> printf "Processed"
@@ -410,7 +416,7 @@ let interpret_feedback xml_fb =
         | Message (levl, loc, xml_content) -> printf "Message %s" (str_feedback_level levl); print_xml stdout xml_content
     end;
     printf "\n";
-    printf "route: %d\n" fb.route;
+    (*printf "route: %d\n" fb.route;*)
     flush stdout
 
 let interpret_cmd cmd_str_list = 
