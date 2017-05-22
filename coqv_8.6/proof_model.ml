@@ -56,18 +56,11 @@ let node_exists nid =
     let proof_tree = current_proof_tree () in
     Hashtbl.mem proof_tree.nodes nid
 
-let select_node nid = 
-    match !current_session_id with
-    | None -> raise Not_in_session
-    | Some sid -> begin
-        try
-            let session = Hashtbl.find ((List.hd !moduls).sessions) sid in
-            try
-                Hashtbl.find session.proof_tree.nodes nid
-            with 
-                Not_found -> raise (Node_not_found nid);
-        with Not_found -> raise (Session_not_found sid)
-    end
+let select_node nid proof_tree = 
+    try
+        Hashtbl.find proof_tree.nodes nid
+    with 
+        Not_found -> raise (Node_not_found nid)
 
 let select_chosen_node () = 
     let focused = ref None in
@@ -87,10 +80,10 @@ let select_chosen_node () =
     done;
     !focused
 
-let add_node node nodeid = 
-    let parent = select_node nodeid in
+let add_node node nodeid proof_tree = 
+    let parent = select_node nodeid proof_tree in
     node.parent <- parent;
-    let proof_tree = current_proof_tree () in
+    (*let proof_tree = current_proof_tree () in*)
     Hashtbl.add proof_tree.nodes node.id node
 
 
