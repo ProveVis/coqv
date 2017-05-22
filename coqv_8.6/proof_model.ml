@@ -95,12 +95,8 @@ let add_node node nodeid =
 
 
 
-let children node = 
-    match !current_session_id with
-    | None -> raise Not_in_session
-    | Some sid ->
-        let session = Hashtbl.find ((List.hd !moduls).sessions) sid in
-        Hashtbl.find session.proof_tree.edges node
+let children node proof_tree = 
+    Hashtbl.find proof_tree.edges node
 
 let hide node = 
     printf "hiding node %s\n" node.id; 
@@ -194,7 +190,7 @@ let add_session_to_modul modul (session : session) =
     Hashtbl.add modul.sessions session.name session
 
 let find_session sn_path = 
-    let find_in_moduls sp modul = 
+    let rec find_in_moduls sp modul = 
         match sp with
         | [] -> None
         | [sname] -> 
@@ -206,4 +202,4 @@ let find_session sn_path =
                 let next_modul = Hashtbl.find modul.modul_tbl mname in
                 find_in_moduls sp' next_modul
             with Not_found -> None) in
-    find_in_moduls sn_path !(List.hd moduls)
+    find_in_moduls sn_path (List.hd !moduls)

@@ -122,7 +122,8 @@ let rec loop args =
                     let cmd = (String.sub input_str 1 (String.length input_str - 1)) in
                     (*printf "command name: %s\n" cmd;
                     flush stdout*)
-                    interpret_cmd cmd
+                    let cmd_str_list = Str.split (Str.regexp "[ \t]+") (String.trim cmd) in
+                    interpret_cmd cmd_str_list
                 end else begin
                     running_coqv := true;
                     handle_input input_str cout

@@ -413,17 +413,27 @@ let interpret_feedback xml_fb =
     printf "route: %d\n" fb.route;
     flush stdout
 
-let interpret_cmd cmd = 
-    printf "Interpreting command: %s\n" cmd;
-    match cmd with
-    | "init" -> request_init None
-    | "status" -> print_endline (Status.str_status ())
-    | "history" -> print_endline (History.str_history ())
-    | _ -> print_endline "command not interpreted."
-    (*if cmd = "init" then
-        request_init None;
-    flush stdout*)
-
+let interpret_cmd cmd_str_list = 
+    match cmd_str_list with
+    | [] -> ()
+    | cmd :: options -> 
+    (*printf "Interpreting command: %s\n" cmd;*)
+        begin
+            match cmd with
+            | "init" -> request_init None
+            | "status" -> print_endline (Status.str_status ())
+            | "history" -> print_endline (History.str_history ())
+            | "proof" -> 
+                if options = [] then
+                    begin
+                        match !Proof_model.current_session_id with
+                        | None -> print_endline "not in proof mode"
+                        | Some sname -> print_endline (Status.str_proof_tree sname)    
+                    end
+                else 
+                    print_endline (Status.str_proof_tree (List.hd options))
+            | _ -> print_endline "command not interpreted."
+        end
 let handle_input input_str cout = 
     output_string stdout (input_str^"\n");
     Cmd.current_cmd_type := Cmd.get_cmd_type input_str;

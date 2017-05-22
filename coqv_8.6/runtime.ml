@@ -2,7 +2,7 @@ open Types
 open Printf
 open Interface
 
-let coqtop_info = ref {
+let coqtop_info : coq_info ref = ref {
     coqtop_version = "";
     protocol_version = "";
     release_date = "";
