@@ -471,13 +471,11 @@ let handle_answer received_str =
                     match !request_mode with
                     | Request_about ->      response_coq_info (Xmlprotocol.to_answer (Xmlprotocol.About ()) xml_str)
                     | Request_init ->       
-                        response_init (Xmlprotocol.to_answer (Xmlprotocol.init None) xml_str);
-                        Runtime.listening_to_coqtop := true
+                        response_init (Xmlprotocol.to_answer (Xmlprotocol.init None) xml_str)
                     | Request_edit_at stateid -> response_edit_at (Xmlprotocol.to_answer (Xmlprotocol.edit_at 0) xml_str) stateid
                     | Request_query ->      response_query (Xmlprotocol.to_answer (Xmlprotocol.query ("", 0)) xml_str)
                     | Request_goals ->      
-                        response_goals (Xmlprotocol.to_answer (Xmlprotocol.goals ()) xml_str);
-                        Runtime.listening_to_coqtop := true
+                        response_goals (Xmlprotocol.to_answer (Xmlprotocol.goals ()) xml_str)
                     | Request_evars ->      response_evars (Xmlprotocol.to_answer (Xmlprotocol.evars ()) xml_str)
                     | Request_hints ->      response_hints (Xmlprotocol.to_answer (Xmlprotocol.hints ()) xml_str)
                     | Request_status ->     response_status (Xmlprotocol.to_answer (Xmlprotocol.status true) xml_str)
@@ -487,8 +485,7 @@ let handle_answer received_str =
                     | Request_mkcases ->    response_mkcases (Xmlprotocol.to_answer (Xmlprotocol.mkcases "") xml_str)
                     | Request_quit ->       response_quit (Xmlprotocol.to_answer (Xmlprotocol.quit ()) xml_str)
                     | Request_add cmd ->        
-                        response_add (Xmlprotocol.to_answer (Xmlprotocol.add (("",0),(0,true))) xml_str) cmd;
-                        Runtime.listening_to_coqtop := false
+                        response_add (Xmlprotocol.to_answer (Xmlprotocol.add (("",0),(0,true))) xml_str) cmd
                     | Request_interp ->     response_interp (Xmlprotocol.to_answer (Xmlprotocol.interp ((true, true),"")) xml_str)
                     | Request_stopworker -> response_stopworker (Xmlprotocol.to_answer (Xmlprotocol.stop_worker "") xml_str)
                     | Request_printast ->   response_printast (Xmlprotocol.to_answer (Xmlprotocol.print_ast 0) xml_str)

@@ -27,8 +27,7 @@ let worker cin =
                 handle_answer output_str;
             flush stdout
         end;
-        if !Runtime.listening_to_coqtop then 
-            Condition.signal read_write_condition
+        Condition.signal read_write_condition
         (*;
         print_endline "received a feedback"*)
     done
@@ -125,7 +124,7 @@ let rec loop args =
                     let cmd_str_list = Str.split (Str.regexp "[ \t]+") (String.trim cmd) in
                     interpret_cmd cmd_str_list
                 end else begin
-                    running_coqv := true;
+                    running_coqv := false;
                     handle_input input_str cout
                 end
             end else 

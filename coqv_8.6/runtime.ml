@@ -25,7 +25,6 @@ let ignored_re () = Str.regexp !prompt
 let new_stateid = ref 0
 let running = ref true
 
-let listening_to_coqtop = ref false
 
 
 
