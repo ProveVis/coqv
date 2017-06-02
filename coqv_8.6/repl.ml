@@ -114,7 +114,7 @@ let rec loop args =
             let len = input stdin input_buffer 0 1024 in
             let input_str = Bytes.sub_string input_buffer 0 len in*)
             let input_str = read_line () in
-            printf "input length: %d\n" (String.length input_str);
+            (*printf "input length: %d\n" (String.length input_str);*)
             if (String.length input_str > 0) then begin
                 if String.sub input_str 0 1 = ":" then begin
                     running_coqv := true;
@@ -125,7 +125,12 @@ let rec loop args =
                     interpret_cmd cmd_str_list
                 end else begin
                     running_coqv := false;
-                    handle_input input_str cout
+                    let str_buffer = ref input_str in
+                    while (String.sub !str_buffer (String.length !str_buffer - 1) 1 <> ".") do
+                        print_string "    > ";
+                        str_buffer := !str_buffer ^ (read_line ())
+                    done;
+                    handle_input !str_buffer cout
                 end
             end else 
                 running_coqv := true
