@@ -35,7 +35,7 @@ let str_proof_tree sn_path =
             let current_node = Queue.pop node_queue in
             str_buf := !str_buf ^ current_node;
             let node = Proof_model.select_node current_node proof_tree in
-            str_buf := !str_buf ^ (Types.str_label node.label);
+            str_buf := (!str_buf) ^" ("^(str_node_state node.state)^")\n"^ (Types.str_label node.label);
             try 
                 let cmd, clist = Proof_model.children current_node proof_tree in
                 str_buf := !str_buf ^ "(" ^ cmd ^ ")\t[";

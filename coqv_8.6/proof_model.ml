@@ -110,13 +110,27 @@ let is_children_complete proof_tree nodeid =
     !flag
 
 let change_node_state nid state = 
+    
     let proof_tree = current_proof_tree () in
-    let tmp_node_queue = Queue.create () in
+    let node = Hashtbl.find proof_tree.nodes nid in
+    printf "changing node %s to state %s\n" nid (str_node_state state);
+    node.state <- state;
+    let rec change_others other_node = 
+        if is_children_complete proof_tree other_node.id then
+            other_node.state <- Proved
+        else 
+            other_node.state <- Not_proved;
+        if other_node.id <> other_node.parent.id then
+            change_others other_node.parent in
+    change_others node.parent
+
+    (*let tmp_node_queue = Queue.create () in
     Queue.push proof_tree.root tmp_node_queue;
     let flag = ref true in
     while !flag && not (Queue.is_empty tmp_node_queue) do
         let node = Queue.pop tmp_node_queue in
         if node.id = nid then begin
+            printf "changing node %s to state %s\n" nid (str_node_state state);
             node.state <- state;
             let rec change_others other_node = 
                 if is_children_complete proof_tree other_node.id then
@@ -132,7 +146,7 @@ let change_node_state nid state =
             List.iter (fun cid -> Queue.push (Hashtbl.find proof_tree.nodes cid) tmp_node_queue) children_id
         with Not_found -> ()
         end 
-    done
+    done*)
 
 let remove_node nid = 
     let proof_tree = current_proof_tree () in
