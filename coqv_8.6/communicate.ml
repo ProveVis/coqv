@@ -3,18 +3,24 @@ open Types
 open Yojson
 
 type message = 
-    | New_node of node
-    | New_edge of string * string
-    | Terminate
+    | Create_session of string * string * string
+    | Remove_session of string
+    | Add_node of string * node
+    | Add_edge of string * string * string * string
+    | Change_node_state of string * string * node_state
+    | Highlight_node of string * string
+    | Feedback_ok of string
+    | Feedback_fail of string * string
 
-let protocol_version_no = "20170502"
+
+(*let protocol_version_no = "20170502"*)
 let sending_queue = Queue.create ()
 let sending_mutex = Mutex.create ()
 let sending_conditional = Condition.create ()
 let log_file = "log"
 (*let receiving_queue = Queue.create ()*)
 
-let handshake cin cout = 
+(*let handshake cin cout = 
     output_string cout protocol_version_no;
     flush cout;
     let opponent_version_no = read_line() in
@@ -26,7 +32,7 @@ let handshake cin cout =
         printf "Error: protocol version %s not match" opponent_version_no;
         flush stdout;
         false
-    end
+    end*)
 
 let wait_to_send msg = 
     Mutex.lock sending_mutex;
@@ -37,28 +43,61 @@ let wait_to_send msg =
 
 let json_of_msg (msg:message) = 
     match msg with
-    | Terminate -> 
+    | Create_session (session_id, session_descr, graph_type) ->
         `Assoc [
-            ("protocol_version", `String protocol_version_no);
-            ("type", `Int 0); (*0 is request, 1 is response*)
-            ("content", `String "Terminate");
+            ("type", `String "create_session");
+            ("session_id", `String session_id);
+            ("session_descr", `String session_descr);
+            ("graph_type", `String graph_type)
         ]
-    | New_node n ->
+    | Remove_session sid ->
         `Assoc [
-            ("protocol_version", `String protocol_version_no);
-            ("type", `Int 0);
-            ("content", `String "New_node");
-            ("node_id", `String n.id);
-            ("node_label", `String (str_label n.label));
-            ("node_state", `String (str_node_state n.state))
+            ("type", `String "remove_session");
+            ("session_id", `String sid)
         ]
-    | New_edge (from_id, to_id) -> 
+    | Add_node (sid, node) ->
         `Assoc [
-            ("protocol_version", `String protocol_version_no);
-            ("type", `Int 0);
-            ("content", `String "New_edge");
+            ("type", `String "add_node");
+            ("session_id", `String sid);
+            ("node", `Assoc [
+                ("id", `String node.id);
+                ("label", `String (str_label node.label));
+                ("state", `String (str_node_state node.state))
+            ])
+        ]
+    | Add_edge (sid, from_id, to_id, label) ->
+        `Assoc [
+            ("type", `String "add_edge");
+            ("session_id", `String sid);
             ("from_id", `String from_id);
-            ("to_id", `String to_id)
+            ("to_id", `String to_id);
+            ("label", `String label)
+        ]
+    | Change_node_state (sid, nid, new_state) ->
+        `Assoc [
+            ("type", `String "change_node_state");
+            ("session_id", `String sid);
+            ("node_id", `String nid);
+            ("new_state", `String (str_node_state new_state))
+        ]
+    | Highlight_node (sid, nid) ->
+        `Assoc [
+            ("type", `String "highlight_node");
+            ("session_id", `String sid);
+            ("node_id", `String nid)
+        ]
+    | Feedback_ok sid ->
+        `Assoc [
+            ("type", `String "feedback");
+            ("session_id", `String sid);
+            ("status", `String "OK")
+        ]
+    | Feedback_fail (sid, error_msg) ->
+        `Assoc [
+            ("type", `String "feedback");
+            ("session_id", `String sid);
+            ("status", `String "Fail");
+            ("error_msg", `String error_msg)
         ]
 
 let sending cout =
@@ -70,15 +109,15 @@ let sending cout =
             Condition.wait sending_conditional sending_mutex;
             Mutex.unlock sending_mutex
         end else begin
-            let msg = ref Terminate in
+            let msg = ref (Feedback_ok "") in
             Mutex.lock sending_mutex;
             msg := Queue.pop sending_queue;
             Mutex.unlock sending_mutex;
-            begin
+            (*begin
                 match !msg with
                 | Terminate -> running := false
                 | _ -> ()
-            end;
+            end;*)
             let json_msg = json_of_msg !msg in
             Yojson.Basic.to_channel cout json_msg;
             flush cout;
