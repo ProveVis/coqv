@@ -1,4 +1,4 @@
-# The communication protocol between CoqV and VMDV
+<!--# The communication protocol between CoqV and VMDV
 ## Introduction
 The communication between coqv and vmdv can be proceed via IPC channels. The IPC channels can be either pipes or sockets, where both ways need a well documented protocol to specify the packing and unpacking of the data structures to be transfered between two tools.
 
@@ -39,4 +39,5 @@ Three parts of a communication protocol need to be specified.
 
 2. XML
 
-(*to be determined*)
+(*to be determined*)-->
+

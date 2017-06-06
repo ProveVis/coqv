@@ -226,7 +226,7 @@ let start_send_receive cin cout =
     ignore (Thread.create (fun cin -> receiving cin) cin);
     ignore (Thread.create (fun cout -> sending cout) cout)
 
-let init_channel ip_addr = 
+let init ip_addr = 
     let i,o = Unix.open_connection (Unix.ADDR_INET (Unix.inet_addr_of_string ip_addr, 3333)) in
     vin := i;
     vout := o;

@@ -26,19 +26,6 @@ let request_mode = ref Request_about
 
 let rec richpp_to_string richpp = 
     Richpp.raw_print richpp
-    (*let repr = richpp in
-    match repr with
-    | Xml_datatype.Element ("_", [] , [Xml_datatype.PCData str_repr]) ->
-        let str1 = Str.global_replace (Str.regexp "<constr\\.reference>") "" str_repr in
-        let str2 = Str.global_replace (Str.regexp "</constr\\.reference>") "" str1 in
-        let str3 = Str.global_replace (Str.regexp "<constr\\.notation>") "" str2 in
-        let str4 = Str.global_replace (Str.regexp "</constr\\.notation>") "" str3 in
-        str4
-    | Xml_datatype.Element (_, _, [x]) -> richpp_to_string x
-    | x -> 
-        print_endline "convert from richpp to string error"; 
-        print_endline (Xml_printer.to_string_fmt x);
-        exit 1*)
 
 let goal_to_label goal = 
     let raw_hyp_list = List.map (fun h -> 
