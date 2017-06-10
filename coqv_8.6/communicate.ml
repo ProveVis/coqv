@@ -11,6 +11,7 @@ type message =
     | Remove_edge of string * string * string
     | Change_node_state of string * string * node_state
     | Highlight_node of string * string
+    | Unhighlight_node of string * string
     | Feedback_ok of string
     | Feedback_fail of string * string
 
@@ -117,6 +118,12 @@ let json_of_msg (msg:message) =
             ("session_id", `String sid);
             ("node_id", `String nid)
         ]
+    | Unhighlight_node (sid, nid) ->
+        `Assoc [
+            ("type", `String "unhighlight_node");
+            ("session_id", `String sid);
+            ("node_id", `String nid)
+        ]
     | Feedback_ok sid ->
         `Assoc [
             ("type", `String "feedback");
@@ -187,7 +194,8 @@ let sending cout =
                 | _ -> ()
             end;*)
             let json_msg = json_of_msg !msg in
-            Yojson.Basic.to_channel cout json_msg;
+            (*Yojson.Basic.to_channel cout json_msg;*)
+            output_string cout ((Yojson.Basic.to_string json_msg)^"\n");
             flush cout;
             output_string log_out "JSON data sent:\n";
             output_string log_out (Yojson.Basic.to_string json_msg);
@@ -202,8 +210,15 @@ let parse msg =
         printf "Highlight node %s in session %s\n" nid sid;
         flush stdout;
         feedback_ok sid
+    | Unhighlight_node (sid, nid) ->
+        printf "Unhighlight node %s in session %s\n" nid sid;
+        flush stdout;
+        feedback_ok sid
     | Feedback_ok sid ->
         printf "Feedback OK received from %s\n" sid;
+        flush stdout
+    | Feedback_fail (sid, error_msg) ->
+        printf "Feedback Fail received from %s: %s\n" sid error_msg;
         flush stdout
     | _ -> 
         printf "Not supposed to recieve this message\n";
