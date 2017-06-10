@@ -7,3 +7,4 @@ coqv.exe
 repl
 comm
 *.eventlog
+log

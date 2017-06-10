@@ -28,6 +28,8 @@ let str_node_state ns =
     | To_be_chosen -> "To_be_chosen"
     | Chosen -> "Chosen"
 
+let node_state_list = [Not_proved; Proved; Assumed; To_be_chosen; Chosen]
+
 type label = {
         id: string;
         hypos: (string * string) list;
