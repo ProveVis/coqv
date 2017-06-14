@@ -64,43 +64,20 @@ let rec loop args =
             let buffer = Bytes.create 4096 in
             let len = input cin buffer 0 4096 in
             let header = Bytes.sub_string buffer 0 len in
-            (*print_endline ("received coq info msg, length "^(string_of_int(String.length header)));*)
-            (*print_endline ("msg content: "^header);*)
             let xparser = Xml_parser.make (Xml_parser.SString header) in
-            (*print_endline ("xparser complete");*)
             let xml_fb = Xml_parser.parse xparser in
-            (*print_endline ("xml_fb complete");*)
-            (*let fb_val = Xmlprotocol.to_value (Xmlprotocol.to_coq_info) xml_fb in
-            (*print_endline ("fb_val complete");*)
-            (match fb_val with
-            | Good fb -> begin
-                    Runtime.coqtop_info := fb;
-                    (*printf "Coqtop Info: \n\tversion %s, \n\tprotocol version %s, \n\trelease date %s, \n\tand compile date %s\n" 
-                        fb.coqtop_version fb.protocol_version fb.release_date fb.compile_date;*)
-                    printf "\t\tCoqV version 0.1 [coqtop version %s (%s)]\n\n" fb.coqtop_version fb.release_date;
-                    flush stdout
-                end
-            | _ -> printf "parsing message fails");*)
-
             let fb_val2 = Xmlprotocol.to_answer (Xmlprotocol.About ()) xml_fb in
             (match fb_val2 with
             | Good fb -> begin
                     Runtime.coqtop_info := fb;
-                    (*printf "Coqtop Info: \n\tversion %s, \n\tprotocol version %s, \n\trelease date %s, \n\tand compile date %s\n" 
-                        fb.coqtop_version fb.protocol_version fb.release_date fb.compile_date;*)
                     printf "\t\tCoqV version 0.1 [coqtop version %s (%s)]\n\n" fb.coqtop_version fb.release_date;
                     flush stdout
                 end
             | _ -> printf "parsing message fails");
-            (*handle_feedback header;
-            let coqtop_info = !Runtime.coqtop_info in
-            printf "\t\tCoqV version 0.1 [coqtop version %s (%s)]\n\n" coqtop_info.coqtop_version coqtop_info.release_date;
-            flush stdout;*)
             running_coqv := true
-            (*;
-            print_endline "init complete, ready to proceed"*)
         end;
         ignore(Thread.create worker cin);
+        request_init None;
         (*print_endline "have created worker";*)
         while !running do
             if not !running_coqv then begin
@@ -117,12 +94,12 @@ let rec loop args =
             (*printf "input length: %d\n" (String.length input_str);*)
             if (String.length input_str > 0) then begin
                 if String.sub input_str 0 1 = ":" then begin
-                    running_coqv := true;
+                    (*running_coqv := true;*)
                     let cmd = (String.sub input_str 1 (String.length input_str - 1)) in
                     (*printf "command name: %s\n" cmd;
                     flush stdout*)
                     let cmd_str_list = Str.split (Str.regexp "[ \t]+") (String.trim cmd) in
-                    interpret_cmd cmd_str_list
+                    running_coqv := interpret_cmd cmd_str_list
                 end else begin
                     running_coqv := false;
                     let str_buffer = ref input_str in

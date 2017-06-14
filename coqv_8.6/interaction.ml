@@ -81,7 +81,7 @@ let request_init filename =
 let response_init msg = 
     match msg with
     | Good stateid -> 
-        print_endline ("got new stateid: "^(string_of_int stateid)); 
+        (*print_endline ("got new stateid: "^(string_of_int stateid)); *)
         Runtime.new_stateid := stateid
     | _ -> printf "unknown from response init\n"; flush stdout    
 
@@ -407,13 +407,15 @@ let interpret_feedback xml_fb =
     flush stdout
 
 let interpret_cmd cmd_str_list = 
-    match cmd_str_list with
-    | [] -> ()
-    | cmd :: options -> 
-    (*printf "Interpreting command: %s\n" cmd;*)
+    let running_coqv = ref true in
+    begin
+        match cmd_str_list with
+        | [] -> ()
+        | cmd :: options -> 
+        (*printf "Interpreting command: %s\n" cmd;*)
         begin
             match cmd with
-            | "init" -> request_init None
+            | "init" -> request_init None; running_coqv := false
             | "status" -> print_endline (Status.str_status ())
             | "history" -> print_endline (History.str_history ())
             | "proof" -> 
@@ -424,14 +426,17 @@ let interpret_cmd cmd_str_list =
                         | Some sname -> print_endline (Status.str_proof_tree sname)    
                     end
                 else 
-                    print_endline (Status.str_proof_tree (List.hd options))
+                    List.iter (fun a -> print_endline (Status.str_proof_tree a)) options
             | _ -> print_endline "command not interpreted."
         end
+    end;
+    !running_coqv
+
 let handle_input input_str cout = 
     output_string stdout (input_str^"\n");
     Cmd.current_cmd_type := Cmd.get_cmd_type input_str;
-    print_endline ("current_cmd_type: "^(Cmd.str_cmd_type !Cmd.current_cmd_type));
-    request_mode := Request_init;
+    (*print_endline ("current_cmd_type: "^(Cmd.str_cmd_type !Cmd.current_cmd_type));*)
+    (*request_mode := Request_init;*)
     request_add (input_str) (-1) !Runtime.new_stateid true;
     flush stdout
 
