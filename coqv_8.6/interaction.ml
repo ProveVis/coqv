@@ -167,10 +167,31 @@ let response_goals msg =
                             change_node_state cnode.id Proved
                         end else begin
                             let node, other_nodes = List.hd new_nodes, List.tl new_nodes in 
-                            match chosen_node with
+                            (*match chosen_node with
                             | None -> print_endline "No focus node, maybe the proof tree is complete"
-                            | Some cnode -> 
-                                List.iter (fun (n:node) ->
+                            | Some cnode ->*)
+                                if node_exists node.id then begin
+                                    (*previous focused goal is proved*)
+                                    if node.id <> cnode.id then begin
+                                        History.record_step !Runtime.new_stateid (Change_state (cnode.id, cnode.state));
+                                        cnode.state <- Proved;
+                                        History.record_step !Runtime.new_stateid (Change_state (node.id, node.state));
+                                        node.state <- Chosen 
+                                    end
+                                end else begin
+                                    History.record_step !Runtime.new_stateid (Change_state (cnode.id, cnode.state));
+                                    cnode.state <- Not_proved;
+                                    add_edge cnode node (snd (List.hd !Doc_model.doc));
+                                    History.record_step !Runtime.new_stateid (Add_node node.id);
+                                    node.state <- Chosen;
+                                    List.iter (fun n -> 
+                                        add_edge cnode n (snd (List.hd !Doc_model.doc));
+                                        History.record_step !Runtime.new_stateid (Add_node n.id);
+                                        n.state <- To_be_chosen
+                                    ) other_nodes
+                                end
+                                    
+                                (*List.iter (fun (n:node) ->
                                     if not (node_exists n.id) then begin
                                         assert(List.length !Doc_model.doc <> 0);
                                         add_edge cnode n (snd (List.hd !Doc_model.doc));
@@ -181,7 +202,7 @@ let response_goals msg =
                                     end
                                 ) new_nodes;
                                 History.record_step !Runtime.new_stateid (Change_state (node.id, node.state));
-                                node.state <- Chosen   
+                                node.state <- Chosen   *)
                         end)
             end
         end

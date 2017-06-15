@@ -65,7 +65,10 @@ let select_node nid proof_tree =
 let select_chosen_node () = 
     let focused = ref None in
     let proof_tree = current_proof_tree () in
-    let tmp_node_queue = Queue.create () in
+    Hashtbl.iter (fun a (b:node) -> 
+        if b.state = Chosen then focused := Some b
+    ) proof_tree.nodes;
+    (*let tmp_node_queue = Queue.create () in
     Queue.push proof_tree.root tmp_node_queue;
     let flag = ref true in
     while !flag && not (Queue.is_empty tmp_node_queue) do
@@ -77,7 +80,7 @@ let select_chosen_node () =
             let _, children_id = Hashtbl.find proof_tree.edges node.id in
             List.iter (fun cid -> Queue.push (Hashtbl.find proof_tree.nodes cid) tmp_node_queue) children_id
         with Not_found -> ()
-    done;
+    done;*)
     !focused
 
 let add_node node nodeid proof_tree = 
