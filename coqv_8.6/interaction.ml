@@ -174,9 +174,10 @@ let response_goals msg =
                                     (*previous focused goal is proved*)
                                     if node.id <> cnode.id then begin
                                         History.record_step !Runtime.new_stateid (Change_state (cnode.id, cnode.state));
-                                        cnode.state <- Proved;
-                                        History.record_step !Runtime.new_stateid (Change_state (node.id, node.state));
-                                        node.state <- Chosen 
+                                        change_node_state cnode.id Proved;
+                                        let node_to_chose = get_node node.id in
+                                        History.record_step !Runtime.new_stateid (Change_state (node_to_chose.id, node_to_chose.state));
+                                        node_to_chose.state <- Chosen 
                                     end
                                 end else begin
                                     History.record_step !Runtime.new_stateid (Change_state (cnode.id, cnode.state));
@@ -184,10 +185,11 @@ let response_goals msg =
                                     add_edge cnode node (snd (List.hd !Doc_model.doc));
                                     History.record_step !Runtime.new_stateid (Add_node node.id);
                                     node.state <- Chosen;
-                                    List.iter (fun n -> 
-                                        add_edge cnode n (snd (List.hd !Doc_model.doc));
-                                        History.record_step !Runtime.new_stateid (Add_node n.id);
-                                        n.state <- To_be_chosen
+                                    List.iter (fun (n:node) -> if not (node_exists n.id) then begin
+                                            add_edge cnode n (snd (List.hd !Doc_model.doc));
+                                            History.record_step !Runtime.new_stateid (Add_node n.id);
+                                            n.state <- To_be_chosen
+                                        end
                                     ) other_nodes
                                 end
                                     

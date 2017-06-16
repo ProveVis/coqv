@@ -56,6 +56,10 @@ let node_exists nid =
     let proof_tree = current_proof_tree () in
     Hashtbl.mem proof_tree.nodes nid
 
+let get_node nid = 
+    let proof_tree = current_proof_tree () in
+    Hashtbl.find proof_tree.nodes nid
+
 let select_node nid proof_tree = 
     try
         Hashtbl.find proof_tree.nodes nid
@@ -113,7 +117,6 @@ let is_children_complete proof_tree nodeid =
     !flag
 
 let change_node_state nid state = 
-    
     let proof_tree = current_proof_tree () in
     let node = Hashtbl.find proof_tree.nodes nid in
     printf "changing node %s to state %s\n" nid (str_node_state state);
