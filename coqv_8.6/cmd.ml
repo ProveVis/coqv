@@ -32,8 +32,6 @@ let caught_str str =
     let str6 = Str.global_replace (Str.regexp "&lt;") "<" str5 in
     str6
 
-let current_cmd_type = ref Other
-
 
 let get_cmd_type cmd =
     let tcmd = String.trim cmd in

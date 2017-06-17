@@ -10,6 +10,7 @@ open Feedback
 open Util
 open Stateid
 open CSig
+open Callbacks
 (*open Parser*)
 
 type request_mode = 
@@ -24,35 +25,6 @@ type request_mode =
 
 let request_mode = ref Request_about 
 
-let rec richpp_to_string richpp = 
-    Richpp.raw_print richpp
-
-let goal_to_label goal = 
-    let raw_hyp_list = List.map (fun h -> 
-        (*printf "goal: \n%s\n" (Xml_printer.to_string_fmt h);*)
-        richpp_to_string h) goal.goal_hyp in
-        (*Serialize.to_list Serialize.to_string goal.goal_hyp in*)
-        (*List.map (fun h -> Serialize.to_list Serialize.to_string h) goal.goal_hyp in*)
-    let hyp_list = List.map (fun h ->
-            let ch = caught_str h in
-            let split_pos = String.index ch ':' in
-            let hn, hc = String.sub ch 0 (split_pos), String.sub ch (split_pos+1) (String.length ch - split_pos-1) in
-            String.trim hn, String.trim hc 
-        ) raw_hyp_list in
-    let conc = String.trim (caught_str (richpp_to_string goal.goal_ccl)) in
-    {
-        id = goal.goal_id;
-        hypos = hyp_list;
-        conclusion = conc;
-    }
-
-
-let print_xml chan xml =
-  let rec print = function
-  | Xml_datatype.PCData s -> output_string chan s
-  | Xml_datatype.Element (_, _, children) -> List.iter print children
-  in
-  print xml
 (*************************************************************************************)
 (**sending xml characters to coqtop**)
 
@@ -117,97 +89,7 @@ let response_goals msg =
                 History.record_step !Runtime.new_stateid Dummy
             | _ -> ()
         end
-    | Good (Some goals) -> begin
-            printf "focused goals number: %d. \n" (List.length (goals.fg_goals));
-            (*Doc_model.raise_cache ();*)
-            begin
-                match !Cmd.current_cmd_type with
-                | Module modul_name -> moduls := (create_module modul_name) :: !moduls
-                | End modul_name -> closing_modul modul_name
-                | Proof (thm_name, kind) -> 
-                    assert(List.length goals.fg_goals <> 0);
-                    let goal = List.hd (goals.fg_goals) in
-                    let label = goal_to_label goal in
-                    (*print_endline label.id;*)
-                    let rec node : node = {
-                        id = goal.goal_id;
-                        label = label;
-                        state = Chosen;
-                        parent = node;
-                    } in
-                    let proof_tree = new_proof_tree node in
-                    let session = new_session thm_name kind Processing proof_tree in
-                    current_session_id := Some thm_name;
-                    printf "current session id: %s\n" thm_name;
-                    flush stdout;
-                    assert(List.length !moduls > 0);
-                    add_session_to_modul (List.hd !moduls) session;
-                    (*printf "%d moduls at the moment\n" (List.length !moduls);*)
-                    History.record_step !Runtime.new_stateid (Add_node node.id)
-                    (*print_endline "finished creating session."*)
-                | Qed -> 
-                    current_session_id := None;
-                    History.record_step !Runtime.new_stateid Dummy
-                | Other -> 
-                    let fg_goals = goals.fg_goals in
-                    let chosen_node = select_chosen_node () in
-                    (match chosen_node with
-                    | None -> print_endline "No focus node, maybe the proof tree is complete"
-                    | Some cnode -> 
-                        let new_nodes : node list = List.map (fun g -> 
-                        {
-                            id = g.goal_id;
-                            label = goal_to_label g;
-                            state = To_be_chosen;
-                            parent = cnode;
-                        }) fg_goals in
-                        if List.length new_nodes = 0 then begin
-                            print_endline "No more goals, shall change the focused node into proved.";
-                            History.record_step !Runtime.new_stateid (Change_state (cnode.id, cnode.state));
-                            change_node_state cnode.id Proved
-                        end else begin
-                            let node, other_nodes = List.hd new_nodes, List.tl new_nodes in 
-                            (*match chosen_node with
-                            | None -> print_endline "No focus node, maybe the proof tree is complete"
-                            | Some cnode ->*)
-                                if node_exists node.id then begin
-                                    (*previous focused goal is proved*)
-                                    if node.id <> cnode.id then begin
-                                        History.record_step !Runtime.new_stateid (Change_state (cnode.id, cnode.state));
-                                        change_node_state cnode.id Proved;
-                                        let node_to_chose = get_node node.id in
-                                        History.record_step !Runtime.new_stateid (Change_state (node_to_chose.id, node_to_chose.state));
-                                        node_to_chose.state <- Chosen 
-                                    end
-                                end else begin
-                                    History.record_step !Runtime.new_stateid (Change_state (cnode.id, cnode.state));
-                                    cnode.state <- Not_proved;
-                                    add_edge cnode node (snd (List.hd !Doc_model.doc));
-                                    History.record_step !Runtime.new_stateid (Add_node node.id);
-                                    node.state <- Chosen;
-                                    List.iter (fun (n:node) -> if not (node_exists n.id) then begin
-                                            add_edge cnode n (snd (List.hd !Doc_model.doc));
-                                            History.record_step !Runtime.new_stateid (Add_node n.id);
-                                            n.state <- To_be_chosen
-                                        end
-                                    ) other_nodes
-                                end
-                                    
-                                (*List.iter (fun (n:node) ->
-                                    if not (node_exists n.id) then begin
-                                        assert(List.length !Doc_model.doc <> 0);
-                                        add_edge cnode n (snd (List.hd !Doc_model.doc));
-                                        History.record_step !Runtime.new_stateid (Add_node n.id);
-                                        History.record_step !Runtime.new_stateid (Change_state (cnode.id, cnode.state));
-                                        cnode.state <- Not_proved;
-                                        n.state <- To_be_chosen;
-                                    end
-                                ) new_nodes;
-                                History.record_step !Runtime.new_stateid (Change_state (node.id, node.state));
-                                node.state <- Chosen   *)
-                        end)
-            end
-        end
+    | Good (Some goals) -> on_receive_goals !Runtime.current_cmd_type goals
     | Fail _ -> 
         print_endline "fail to get goals"
 
