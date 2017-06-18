@@ -2,16 +2,29 @@ open Printf
 open Runtime
 open Proof_model
 open Coqv_utils
+open Types
+open Interface
+open History
+
+let on_change_node_state node state = 
+    History.record_step !Runtime.new_stateid (Change_state (node.id, node.state));
+    change_node_state node.id state
+
+let on_add_node node_from node_to state = 
+    add_edge node_from node_to (snd (List.hd !Doc_model.doc));
+    History.record_step !Runtime.new_stateid (Add_node node_to.id);
+    node_to.state <- state
+
 
 let on_receive_goals cmd_type goals = 
-    printf "focused goals number: %d. \n" (List.length (goals));
+    printf "focused goals number: %d. \n" (List.length (goals.fg_goals));
     begin
         match cmd_type with
         | Module modul_name -> moduls := (create_module modul_name) :: !moduls
         | End modul_name -> closing_modul modul_name
         | Proof (thm_name, kind) -> 
-            assert(List.length goals <> 0);
-            let goal = List.hd (goals) in
+            assert(List.length (goals.fg_goals) <> 0);
+            let goal = List.hd (goals.fg_goals) in
             let label = goal_to_label goal in
             (*print_endline label.id;*)
             let rec node : node = {
@@ -48,8 +61,9 @@ let on_receive_goals cmd_type goals =
                 }) fg_goals in
                 if List.length new_nodes = 0 then begin
                     print_endline "No more goals, shall change the focused node into proved.";
-                    History.record_step !Runtime.new_stateid (Change_state (cnode.id, cnode.state));
-                    change_node_state cnode.id Proved
+                    on_change_node_state cnode Proved
+                    (*History.record_step !Runtime.new_stateid (Change_state (cnode.id, cnode.state));
+                    change_node_state cnode.id Proved*)
                 end else begin
                     let node, other_nodes = List.hd new_nodes, List.tl new_nodes in 
                     (*match chosen_node with
@@ -58,22 +72,29 @@ let on_receive_goals cmd_type goals =
                         if node_exists node.id then begin
                             (*previous focused goal is proved*)
                             if node.id <> cnode.id then begin
-                                History.record_step !Runtime.new_stateid (Change_state (cnode.id, cnode.state));
-                                change_node_state cnode.id Proved;
+                                (*History.record_step !Runtime.new_stateid (Change_state (cnode.id, cnode.state));
+                                change_node_state cnode.id Proved;*)
+                                on_change_node_state cnode Proved;
                                 let node_to_chose = get_node node.id in
-                                History.record_step !Runtime.new_stateid (Change_state (node_to_chose.id, node_to_chose.state));
-                                node_to_chose.state <- Chosen 
+                                (*History.record_step !Runtime.new_stateid (Change_state (node_to_chose.id, node_to_chose.state));
+                                node_to_chose.state <- Chosen *)
+                                on_change_node_state node_to_chose Chosen
                             end
                         end else begin
-                            History.record_step !Runtime.new_stateid (Change_state (cnode.id, cnode.state));
-                            cnode.state <- Not_proved;
-                            add_edge cnode node (snd (List.hd !Doc_model.doc));
+                            (*History.record_step !Runtime.new_stateid (Change_state (cnode.id, cnode.state);
+                            cnode.state <- Not_proved;*)
+                            on_change_node_state cnode Not_proved;
+                            (*printf "changed state of node %s" cnode.id;*)
+                            flush stdout;
+                            (*add_edge cnode node (snd (List.hd !Doc_model.doc));
                             History.record_step !Runtime.new_stateid (Add_node node.id);
-                            node.state <- Chosen;
+                            node.state <- Chosen;*)
+                            on_add_node cnode node Chosen;
                             List.iter (fun (n:node) -> if not (node_exists n.id) then begin
-                                    add_edge cnode n (snd (List.hd !Doc_model.doc));
+                                    (*add_edge cnode n (snd (List.hd !Doc_model.doc));
                                     History.record_step !Runtime.new_stateid (Add_node n.id);
-                                    n.state <- To_be_chosen
+                                    n.state <- To_be_chosen*)
+                                    on_add_node cnode n To_be_chosen
                                 end
                             ) other_nodes
                         end

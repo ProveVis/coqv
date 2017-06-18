@@ -11,6 +11,7 @@ open Util
 open Stateid
 open CSig
 open Callbacks
+open Coqv_utils
 (*open Parser*)
 
 type request_mode = 
@@ -83,7 +84,7 @@ let response_goals msg =
     | Good None -> 
         print_endline "**************no more goals****************";
         begin
-            match !Cmd.current_cmd_type with
+            match !Runtime.current_cmd_type with
             | Qed -> 
                 current_session_id := None;
                 History.record_step !Runtime.new_stateid Dummy
@@ -338,8 +339,8 @@ let interpret_cmd cmd_str_list =
     !running_coqv
 
 let handle_input input_str cout = 
-    output_string stdout (input_str^"\n");
-    Cmd.current_cmd_type := Cmd.get_cmd_type input_str;
+    (*output_string stdout (input_str^"\n");*)
+    Runtime.current_cmd_type := get_cmd_type input_str;
     (*print_endline ("current_cmd_type: "^(Cmd.str_cmd_type !Cmd.current_cmd_type));*)
     (*request_mode := Request_init;*)
     request_add (input_str) (-1) !Runtime.new_stateid true;
@@ -367,7 +368,7 @@ let handle_answer received_str =
             other_xml_str str "</message>"            
         | None -> 
             if Xmlprotocol.is_feedback xml_str then begin
-                interpret_feedback xml_str;
+                (*interpret_feedback xml_str;*)
                 other_xml_str str "</feedback>"    
             end else begin
                 begin

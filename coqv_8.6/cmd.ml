@@ -24,13 +24,20 @@ let escaped_str str =
     escapted_str
 
 let caught_str str = 
-    let str1 = Str.global_replace (Str.regexp "&nbsp;") " " str in
+    (*let str1 = Str.global_replace (Str.regexp "&nbsp;") " " str in
     let str2 = Str.global_replace (Str.regexp "&apos;") "'" str1 in
     let str3 = Str.global_replace (Str.regexp "&quot;") "\"" str2 in
     let str4 = Str.global_replace (Str.regexp "&amp;") "&" str3 in
     let str5 = Str.global_replace (Str.regexp "&gt;") ">" str4 in
     let str6 = Str.global_replace (Str.regexp "&lt;") "<" str5 in
-    str6
+    str6;*)
+    str |>
+    Str.global_replace (Str.regexp "&nbsp;") " " |>
+    Str.global_replace (Str.regexp "&apos;") "'" |>
+    Str.global_replace (Str.regexp "&quot;") "\"" |>
+    Str.global_replace (Str.regexp "&amp;") "&" |>
+    Str.global_replace (Str.regexp "&gt;") ">" |>
+    Str.global_replace (Str.regexp "&lt;") "<"
 
 
 let get_cmd_type cmd =

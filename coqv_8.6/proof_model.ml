@@ -107,19 +107,22 @@ let show node =
     flush stdout
 
 let is_children_complete proof_tree nodeid = 
-    let _, children_id = Hashtbl.find proof_tree.edges nodeid in
-    let flag = ref true in
-    List.iter (fun cid -> 
-        match (Hashtbl.find proof_tree.nodes cid).state with
-        | Proved | Assumed -> ()
-        | _ -> flag := false
-    ) children_id;
-    !flag
+    if Hashtbl.mem proof_tree.edges nodeid then begin
+        let _, children_id = Hashtbl.find proof_tree.edges nodeid in
+        let flag = ref true in
+        List.iter (fun cid -> 
+            match (Hashtbl.find proof_tree.nodes cid).state with
+            | Proved | Assumed -> ()
+            | _ -> flag := false
+        ) children_id;
+        !flag
+    end else 
+        true
 
 let change_node_state nid state = 
     let proof_tree = current_proof_tree () in
     let node = Hashtbl.find proof_tree.nodes nid in
-    printf "changing node %s to state %s\n" nid (str_node_state state);
+    (*printf "changing node %s to state %s\n" nid (str_node_state state);*)
     node.state <- state;
     let rec change_others other_node = 
         if is_children_complete proof_tree other_node.id then
@@ -128,7 +131,8 @@ let change_node_state nid state =
             other_node.state <- Not_proved;
         if other_node.id <> other_node.parent.id then
             change_others other_node.parent in
-    change_others node.parent
+    if node.id <> node.parent.id then (*exclude root*)
+        change_others node.parent
 
     (*let tmp_node_queue = Queue.create () in
     Queue.push proof_tree.root tmp_node_queue;
