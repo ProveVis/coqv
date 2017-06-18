@@ -17,7 +17,7 @@ let on_add_node node_from node_to state =
 
 
 let on_receive_goals cmd_type goals = 
-    printf "focused goals number: %d. \n" (List.length (goals.fg_goals));
+    (*printf "focused goals number: %d. \n" (List.length (goals.fg_goals));*)
     begin
         match cmd_type with
         | Module modul_name -> moduls := (create_module modul_name) :: !moduls
