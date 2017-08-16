@@ -32,6 +32,7 @@ let on_receive_goals cmd_type goals =
                 label = label;
                 state = Chosen;
                 parent = node;
+                stateid = !Runtime.new_stateid;
             } in
             let proof_tree = new_proof_tree node in
             let session = new_session thm_name kind Processing proof_tree in
@@ -43,7 +44,7 @@ let on_receive_goals cmd_type goals =
             (*printf "%d moduls at the moment\n" (List.length !moduls);*)
             History.record_step !Runtime.new_stateid (Add_node node.id);
             begin
-                match Runtime.vagent with
+                match !Runtime.vagent with
                 | None -> print_endline "no vmdv agent currently"
                 | Some vagt -> Communicate.create_session vagt session
             end
@@ -63,6 +64,7 @@ let on_receive_goals cmd_type goals =
                     label = goal_to_label g;
                     state = To_be_chosen;
                     parent = cnode;
+                    stateid = !Runtime.new_stateid;
                 }) fg_goals in
                 if List.length new_nodes = 0 then begin
                     print_endline "No more goals, shall change the focused node into proved.";
@@ -83,14 +85,20 @@ let on_receive_goals cmd_type goals =
                                 let node_to_chose = get_node node.id in
                                 (*History.record_step !Runtime.new_stateid (Change_state (node_to_chose.id, node_to_chose.state));
                                 node_to_chose.state <- Chosen *)
-                                on_change_node_state node_to_chose Chosen
+                                on_change_node_state node_to_chose Chosen;
+                                node_to_chose.stateid <- !Runtime.new_stateid;
+                                List.iter (fun n ->
+                                    let node = get_node n.id in
+                                    on_change_node_state node To_be_chosen;
+                                    node.stateid <- !Runtime.new_stateid
+                                ) other_nodes
                             end
                         end else begin
                             (*History.record_step !Runtime.new_stateid (Change_state (cnode.id, cnode.state);
                             cnode.state <- Not_proved;*)
                             on_change_node_state cnode Not_proved;
                             (*printf "changed state of node %s" cnode.id;*)
-                            flush stdout;
+                            (* flush stdout; *)
                             (*add_edge cnode node (snd (List.hd !Doc_model.doc));
                             History.record_step !Runtime.new_stateid (Add_node node.id);
                             node.state <- Chosen;*)

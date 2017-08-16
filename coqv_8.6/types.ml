@@ -47,6 +47,7 @@ type node = {
     label: label;
     mutable state: node_state;
     mutable parent: node;
+    mutable stateid: int;
 }
 
 type tatic = string
