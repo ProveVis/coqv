@@ -41,7 +41,12 @@ let on_receive_goals cmd_type goals =
             assert(List.length !moduls > 0);
             add_session_to_modul (List.hd !moduls) session;
             (*printf "%d moduls at the moment\n" (List.length !moduls);*)
-            History.record_step !Runtime.new_stateid (Add_node node.id)
+            History.record_step !Runtime.new_stateid (Add_node node.id);
+            begin
+                match Runtime.vagent with
+                | None -> print_endline "no vmdv agent currently"
+                | Some vagt -> Communicate.create_session vagt session
+            end
             (*print_endline "finished creating session."*)
         | Qed -> 
             current_session_id := None;

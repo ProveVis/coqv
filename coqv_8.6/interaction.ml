@@ -3,7 +3,7 @@ open Runtime
 open Types
 open Lexing
 open Interface
-open Cmd
+(* open Cmd *)
 open Proof_model
 open History
 open Feedback

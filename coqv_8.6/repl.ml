@@ -57,7 +57,7 @@ let rec loop args =
             let buffer = Bytes.create 1024 in
             let len = input cin buffer 0 1024 in
             let header = Bytes.sub_string buffer 0 len in
-            printf "\t\tCoqV version 0.1 [coqtop version %s]\n\n" (Str.global_replace (Str.regexp "\n") "" (Str.global_replace (Str.regexp "Welcome to Coq ") "" header))
+            printf "\t\tcoqv version 0.1 [coqtop version %s]\n\n" (Str.global_replace (Str.regexp "\n") "" (Str.global_replace (Str.regexp "Welcome to Coq ") "" header))
         end else begin
             Interaction.request_coq_info cout;
             Thread.delay 0.1;
@@ -70,7 +70,7 @@ let rec loop args =
             (match fb_val2 with
             | Good fb -> begin
                     Runtime.coqtop_info := fb;
-                    printf "\t\tCoqV version 0.1 [coqtop version %s (%s)]\n\n" fb.coqtop_version fb.release_date;
+                    printf "\t\tcoqv version 0.1 [coqtop version %s (%s)]\n\n" fb.coqtop_version fb.release_date;
                     flush stdout
                 end
             | _ -> printf "parsing message fails");
@@ -114,7 +114,18 @@ let rec loop args =
         done
     end
 
-let _ = loop ["-xml";"-ideslave"; "-main-channel"; "stdfds"]
+let _ = 
+    Arg.parse 
+        [
+            "-ip", Arg.String (fun s -> 
+                    try
+                        Runtime.vagent := Some (Communicate.get_visualize_agent s)
+                    with _ -> print_endline ("connect to vmdv in "^s^" failed.")
+                ), "\tIP address of the VMDV.";
+        ]
+        (fun s -> print_endline ("unknown option"^s))
+        "Usage: coqv [-ip <ip_address>]";
+    loop ["-xml";"-ideslave"; "-main-channel"; "stdfds"]
     (*Arg.parse
         [
             "-xml", Arg.Unit (fun () -> Flags.xml := true), "\tUsing XML to communicate with coqtop.";
