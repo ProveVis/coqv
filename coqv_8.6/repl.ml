@@ -16,7 +16,9 @@ let read_write_mutex = Mutex.create ()
 let worker cin =     
     let buffer = Bytes.create 4096 in
     while !Runtime.running do
+        print_endline "wait for coqtop";
         let len = input cin buffer 0 4096 in
+        print_endline "coqtop responsed";
         if len = 0 then
             running := false
         else begin

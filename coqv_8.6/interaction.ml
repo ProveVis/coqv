@@ -137,25 +137,28 @@ let request_edit_at stateid =
     Xml_printer.print (Xml_printer.TChannel cout) xml_editat
 
 let response_edit_at msg stateid =
-    match msg with
-    | Good (CSig.Inl ()) ->
-        printf "simple backtract;\n";
-        flush stdout;
-        Doc_model.move_focus_to stateid;
-        Runtime.new_stateid := stateid;
-        History.undo_upto stateid
-    | Good (CSig.Inr (focusedStateId, (focusedQedStateId, oldFocusedStateId))) ->
-        printf "focusedStateId: %d, focusedQedStateId: %d, oldFocusedStateId: %d\n" focusedStateId focusedQedStateId oldFocusedStateId;
-        flush stdout;
-        Doc_model.move_focus_to stateid;
-        Runtime.new_stateid := stateid;
-        History.undo_upto stateid
-    | Fail (errorFreeStateId, loc, xml_content) ->
-        printf "errorFreeStateId: %d, message content: " errorFreeStateId;
-        print_xml stdout xml_content;
-        print_endline "";
-        flush stdout;
-        request_edit_at errorFreeStateId
+    begin
+        match msg with
+        | Good (CSig.Inl ()) ->
+            printf "simple backtract;\n";
+            flush stdout;
+            on_edit_at stateid
+        | Good (CSig.Inr (focusedStateId, (focusedQedStateId, oldFocusedStateId))) ->
+            printf "focusedStateId: %d, focusedQedStateId: %d, oldFocusedStateId: %d\n" focusedStateId focusedQedStateId oldFocusedStateId;
+            flush stdout;
+            on_edit_at stateid
+            (* Doc_model.move_focus_to stateid;
+            Runtime.new_stateid := stateid;
+            History.undo_upto stateid *)
+        | Fail (errorFreeStateId, loc, xml_content) ->
+            printf "errorFreeStateId: %d, message content: " errorFreeStateId;
+            print_xml stdout xml_content;
+            print_endline "";
+            flush stdout;
+            request_edit_at errorFreeStateId
+    end;
+    request_goals (); (*fetch goals after edit at some new stateid*)
+    flush coq_channels.cout
 
 let request_query query stateid = 
     let cout = Runtime.coq_channels.cout in
@@ -333,6 +336,9 @@ let interpret_cmd cmd_str_list =
                     end
                 else 
                     List.iter (fun a -> print_endline (Status.str_proof_tree a)) options
+            | "undo_to" ->
+                let new_stateid = int_of_string (List.hd options) in
+                request_edit_at new_stateid
             | _ -> print_endline "command not interpreted."
         end
     end;

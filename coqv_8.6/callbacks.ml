@@ -113,3 +113,9 @@ let on_receive_goals cmd_type goals =
                         end
                 end)
             end                
+
+
+let on_edit_at stateid = 
+    Doc_model.move_focus_to stateid;
+    Runtime.new_stateid := stateid;
+    History.undo_upto stateid

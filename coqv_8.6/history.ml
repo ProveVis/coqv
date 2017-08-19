@@ -34,7 +34,8 @@ let undo_upto stateid =
                 | Change_state (nid, from_state) -> Proof_model.change_node_state nid from_state
                 | Add_node nid -> Proof_model.remove_node nid 
                 | Dummy -> () in
-            List.iter (fun s -> undo_step s) steps
+            List.iter (fun s -> undo_step s) steps;
+            tmp_history := List.tl !tmp_history
         end
     done
 

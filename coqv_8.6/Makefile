@@ -1,10 +1,11 @@
 all: 
-	ocamlfind ocamlc -I XML -thread -o coqv -package yojson -linkpkg -g str.cma threads.cma xml.cma \
+	make xml
+	ocamlfind ocamlc -I utils -thread -o coqv -package yojson -linkpkg -g str.cma threads.cma xml.cma \
 	 flags.ml types.ml communicate.ml runtime.ml coqv_utils.ml doc_model.ml proof_model.ml history.ml status.ml \
 	 callbacks.ml interaction.ml repl.ml
 
 xml:
-	make -C XML xml
+	make -C utils xml
 	# ocamlc -c xml_datatype.mli
 	# ocamllex xml_lexer.mll
 	# ocamlc -c xml_lexer.ml
@@ -22,4 +23,4 @@ clean:
 	rm -f comm
 	rm -f repl
 	rm -f *.eventlog
-	make -C XML clean
+	make -C utils clean
