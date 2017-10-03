@@ -12,6 +12,7 @@ type message =
     | Change_node_state of string * string * node_state
     | Highlight_node of string * string
     | Unhighlight_node of string * string
+    | Clear_color of string
     | Feedback_ok of string
     | Feedback_fail of string * string
 
@@ -66,6 +67,7 @@ let remove_edge vagent sid from_id to_id = wait_to_send vagent (Remove_edge (sid
 let change_node_state vagent sid nid state = wait_to_send vagent (Change_node_state (sid, nid, state))
 let highlight_node vagent sid nid = wait_to_send vagent (Highlight_node (sid, nid))
 let unhighlight_node vagent sid nid = wait_to_send vagent (Unhighlight_node (sid, nid))
+let clear_color vagent sid = wait_to_send vagent (Clear_color sid)
 let feedback_ok vagent sid = wait_to_send vagent (Feedback_ok sid)
 let feedback_fail vagent sid error_msg = wait_to_send vagent (Feedback_fail (sid, error_msg))
 
@@ -135,6 +137,11 @@ let json_of_msg (msg:message) =
             ("session_id", `String sid);
             ("node_id", `String nid)
         ]
+    | Clear_color sid ->
+        `Assoc [
+            ("type", `String "clear_color");
+            ("session_id", `String sid)
+        ]
     | Feedback_ok sid ->
         `Assoc [
             ("type", `String "feedback");
@@ -171,8 +178,10 @@ let msg_of_json json =
             match get_string_of_json (get_json_of_key "type" str_json_list) with
             | "highlight_node" -> 
                 Highlight_node ((get_string_of_json (get_json_of_key "session_id" str_json_list)), (get_string_of_json (get_json_of_key "node_id" str_json_list)))
-                (*printf "highlight node %s in session %s\n" (get_string_of_json (get_json_of_key "node_id" str_json_list)) (get_string_of_json (get_json_of_key "session_id" str_json_list));
-                flush stdout*)
+            | "unhighlight_node" -> 
+                Unhighlight_node ((get_string_of_json (get_json_of_key "session_id" str_json_list)), (get_string_of_json (get_json_of_key "node_id" str_json_list)))
+            | "clear_color" ->
+                Clear_color (get_string_of_json (get_json_of_key "session_id" str_json_list))
             | "feedback" -> 
                 let status = get_string_of_json (get_json_of_key "status" str_json_list) in
                 if status = "OK" then
@@ -241,7 +250,10 @@ let receiving vagent =
     (*let running = ref true in*)
     let log_out = open_out log_file in
     while vagent.is_alive do
-        let json_msg = Yojson.Basic.from_channel cin in
+        let buffer = Bytes.create 4096 in
+        let len = input cin buffer 0 4096 in
+        let raw_str = Bytes.sub_string buffer 0 len in
+        let json_msg = Yojson.Basic.from_string raw_str in
         output_string log_out "JSON data received:\n";
         output_string log_out (Yojson.Basic.to_string json_msg);
         output_string log_out "\n";

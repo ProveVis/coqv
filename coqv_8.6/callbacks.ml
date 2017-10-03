@@ -6,14 +6,42 @@ open Types
 open Interface
 open History
 
+let on_new_session (session: session) = 
+    current_session_id := session.name;
+    printf "current session id: %s\n" session.name;
+    flush stdout;
+    assert(List.length !moduls > 0);
+    add_session_to_modul (List.hd !moduls) session;
+    (*printf "%d moduls at the moment\n" (List.length !moduls);*)
+    let node = session.proof_tree.root in
+    History.record_step !Runtime.new_stateid (Add_node node.id);
+    begin
+        match !Runtime.vagent with
+        | None -> print_endline "no vmdv agent currently"
+        | Some vagt -> 
+            Communicate.create_session vagt session;
+            Communicate.add_node vagt session.name node
+    end
+
 let on_change_node_state node state = 
     History.record_step !Runtime.new_stateid (Change_state (node.id, node.state));
     change_node_state node.id state
 
 let on_add_node node_from node_to state = 
-    add_edge node_from node_to (snd (List.hd !Doc_model.doc));
+    let label = (snd (List.hd !Doc_model.doc)) in
+    add_edge node_from node_to label;
     History.record_step !Runtime.new_stateid (Add_node node_to.id);
-    node_to.state <- state
+    node_to.state <- state;
+    begin
+        match !Runtime.vagent with
+        | None -> print_endline "no vmdv agent currently"
+        | Some vagt ->
+            let sid = !Proof_model.current_session_id in
+            if sid <> "" then begin
+                Communicate.add_node vagt sid node_to;
+                Communicate.add_edge vagt sid node_from.id node_to.id label    
+            end
+    end
 
 
 let on_receive_goals cmd_type goals = 
@@ -36,21 +64,10 @@ let on_receive_goals cmd_type goals =
             } in
             let proof_tree = new_proof_tree node in
             let session = new_session thm_name kind Processing proof_tree in
-            current_session_id := Some thm_name;
-            printf "current session id: %s\n" thm_name;
-            flush stdout;
-            assert(List.length !moduls > 0);
-            add_session_to_modul (List.hd !moduls) session;
-            (*printf "%d moduls at the moment\n" (List.length !moduls);*)
-            History.record_step !Runtime.new_stateid (Add_node node.id);
-            begin
-                match !Runtime.vagent with
-                | None -> print_endline "no vmdv agent currently"
-                | Some vagt -> Communicate.create_session vagt session
-            end
+            on_new_session session
             (*print_endline "finished creating session."*)
         | Qed -> 
-            current_session_id := None;
+            current_session_id := "";
             History.record_step !Runtime.new_stateid Dummy
         | Other -> 
             let fg_goals = goals.fg_goals in

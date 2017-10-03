@@ -9,8 +9,8 @@ let str_status () =
     let str_history = sprintf "history recorded: %d records" (List.length !History.history) in
     let str_session = sprintf "current session: %s" begin
             match !Proof_model.current_session_id with
-            | None -> "None"
-            | Some sname -> sname
+            | "" -> "None"
+            | sname -> sname
         end in
     sprintf "\n\t%s\n\t%s\n\t%s\n\t%s" 
         str_coqinfo 

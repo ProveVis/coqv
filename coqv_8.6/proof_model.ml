@@ -9,7 +9,7 @@ let create_module modul_name =
     }
 
 
-let current_session_id = ref None
+let current_session_id = ref ""
 let top_module = create_module "Unnamed_module"
 let moduls = ref [top_module]
 
@@ -45,8 +45,8 @@ let closing_modul name =
 
 let current_proof_tree () = 
     match !current_session_id with
-    | None -> raise Not_in_session
-    | Some sid -> 
+    | "" -> raise Not_in_session
+    | sid -> 
         try
             let session = Hashtbl.find ((List.hd !moduls).sessions) sid in
             session.proof_tree

@@ -72,7 +72,7 @@ let rec loop args =
             (match fb_val2 with
             | Good fb -> begin
                     Runtime.coqtop_info := fb;
-                    printf "\t\tcoqv version 0.1 [coqtop version %s (%s)]\n\n" fb.coqtop_version fb.release_date;
+                    printf "\t\tcoqv version %s [coqtop version %s (%s)]\n\n" Flags.version_no fb.coqtop_version fb.release_date;
                     flush stdout
                 end
             | _ -> printf "parsing message fails");
@@ -128,14 +128,3 @@ let _ =
         (fun s -> print_endline ("unknown option"^s))
         "Usage: coqv [-ip <ip_address>]";
     loop ["-xml";"-ideslave"; "-main-channel"; "stdfds"]
-    (*Arg.parse
-        [
-            "-xml", Arg.Unit (fun () -> Flags.xml := true), "\tUsing XML to communicate with coqtop.";
-        ]
-        (fun s -> print_endline ("unknown option: "^s))
-        "Usage: coqv [-xml]";
-    if !Flags.xml then begin
-        (*print_endline "coqv with xml";*)
-        loop ["-xml";"-ideslave"; "-main-channel"; "stdfds"]
-    end else
-        loop ["-ideslave"]*)

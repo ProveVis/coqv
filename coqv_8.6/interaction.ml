@@ -86,7 +86,7 @@ let response_goals msg =
         begin
             match !Runtime.current_cmd_type with
             | Qed -> 
-                current_session_id := None;
+                current_session_id := "";
                 History.record_step !Runtime.new_stateid Dummy
             | _ -> ()
         end
@@ -282,8 +282,6 @@ let request_annotate str =
 let response_annotate msg = 
     print_endline "response annotate, not finished"
 
-
-
 (*************************************************************************************)
 
 let interpret_feedback xml_fb = 
@@ -331,8 +329,8 @@ let interpret_cmd cmd_str_list =
                 if options = [] then
                     begin
                         match !Proof_model.current_session_id with
-                        | None -> print_endline "not in proof mode"
-                        | Some sname -> print_endline (Status.str_proof_tree sname)    
+                        | "" -> print_endline "not in proof mode"
+                        | sname -> print_endline (Status.str_proof_tree sname)    
                     end
                 else 
                     List.iter (fun a -> print_endline (Status.str_proof_tree a)) options
