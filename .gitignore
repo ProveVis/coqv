@@ -8,4 +8,5 @@ repl
 comm
 *.eventlog
 log
+*.log
 /coqv_8.6/.vscode/

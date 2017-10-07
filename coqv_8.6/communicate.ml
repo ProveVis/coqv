@@ -27,30 +27,14 @@ type visualize_agent =
     }
 
 
-
-(*let protocol_version_no = "20170502"*)
-
-let log_file = "log"
-
-(*let vin = ref stdin
-let vout = ref stdout*)
-
-
-(*let receiving_queue = Queue.create ()*)
-
-(*let handshake cin cout = 
-    output_string cout protocol_version_no;
-    flush cout;
-    let opponent_version_no = read_line() in
-    if protocol_version_no = opponent_version_no then begin
-        print_endline "Protocol match, handshake success.";
-        true    
-    end
-    else begin
-        printf "Error: protocol version %s not match" opponent_version_no;
-        flush stdout;
-        false
-    end*)
+let log_out = if !Flags.json_log_file = "" then None else Some (open_out !Flags.json_log_file)
+    
+let log_if_possible str = 
+    match log_out with 
+    | None -> ()
+    | Some out -> 
+        output_string out str;
+        flush out
 
 let wait_to_send vagent msg = 
     Mutex.lock vagent.sending_mutex;
@@ -186,19 +170,14 @@ let msg_of_json json =
                 let status = get_string_of_json (get_json_of_key "status" str_json_list) in
                 if status = "OK" then
                     Feedback_ok (get_string_of_json (get_json_of_key "session_id" str_json_list))
-                    (*printf "OK from session %s\n" (get_string_of_json (get_json_of_key "session_id" str_json_list))*)
                 else
                     Feedback_fail ((get_string_of_json (get_json_of_key "session_id" str_json_list)), (get_string_of_json (get_json_of_key "error_msg" str_json_list)))
-                    (*printf "Fail from session %s: %s\n" (get_string_of_json (get_json_of_key "session_id" str_json_list)) (get_string_of_json (get_json_of_key "error_msg" str_json_list));*)
-                (*flush stdout*)
             | _ as s -> printf "not supposed to be received by coqv: %s\n" s; exit 1
         end
     | _ -> printf "%s can not be a message\n" (Yojson.Basic.to_string json); exit 1
 
 let sending vagent =
     let cout = vagent.output in
-    (*let running = ref true in*)
-    let log_out = open_out log_file in
     while vagent.is_alive do
         if Queue.is_empty vagent.sending_queue then begin
             Mutex.lock vagent.sending_mutex;
@@ -209,19 +188,11 @@ let sending vagent =
             Mutex.lock vagent.sending_mutex;
             msg := Queue.pop vagent.sending_queue;
             Mutex.unlock vagent.sending_mutex;
-            (*begin
-                match !msg with
-                | Terminate -> running := false
-                | _ -> ()
-            end;*)
             let json_msg = json_of_msg !msg in
-            (*Yojson.Basic.to_channel cout json_msg;*)
             output_string cout ((Yojson.Basic.to_string json_msg)^"\n");
             flush cout;
-            output_string log_out "JSON data sent:\n";
-            output_string log_out (Yojson.Basic.to_string json_msg);
-            output_string log_out "\n";
-            flush log_out
+
+            log_if_possible ("Sent: "^(Yojson.Basic.to_string json_msg)^"\n")
         end
     done
 
@@ -247,17 +218,12 @@ let parse vagent msg =
 
 let receiving vagent =
     let cin = vagent.input in 
-    (*let running = ref true in*)
-    let log_out = open_out log_file in
     while vagent.is_alive do
-        let buffer = Bytes.create 4096 in
-        let len = input cin buffer 0 4096 in
+        let buffer = Bytes.create !Flags.json_bufsize in
+        let len = input cin buffer 0 !Flags.json_bufsize in
         let raw_str = Bytes.sub_string buffer 0 len in
         let json_msg = Yojson.Basic.from_string raw_str in
-        output_string log_out "JSON data received:\n";
-        output_string log_out (Yojson.Basic.to_string json_msg);
-        output_string log_out "\n";
-        flush log_out;
+        log_if_possible ("Received: "^(Yojson.Basic.to_string json_msg)^"\n");
         let msg = msg_of_json json_msg in
         parse vagent msg
     done
@@ -278,6 +244,3 @@ let get_visualize_agent ip_addr =
     } in
     start_send_receive vagent;
     vagent
-
-
-

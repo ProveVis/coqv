@@ -4,20 +4,16 @@ open Runtime
 open Interaction
 open Interface
 
-let in_chan = stdin
-let out_chan = stdout
-(*let running = ref true*)
-
 let command_re = Str.regexp ":[-_A-Za-z0-9]+"
 
 let read_write_condition = Condition.create ()
 let read_write_mutex = Mutex.create ()
 
 let worker cin =     
-    let buffer = Bytes.create 4096 in
+    let buffer = Bytes.create !Flags.xml_bufsize in
     while !Runtime.running do
         print_endline "wait for coqtop";
-        let len = input cin buffer 0 4096 in
+        let len = input cin buffer 0 !Flags.xml_bufsize in
         print_endline "coqtop responsed";
         if len = 0 then
             running := false
@@ -59,12 +55,12 @@ let rec loop args =
             let buffer = Bytes.create 1024 in
             let len = input cin buffer 0 1024 in
             let header = Bytes.sub_string buffer 0 len in
-            printf "\t\tcoqv version 0.1 [coqtop version %s]\n\n" (Str.global_replace (Str.regexp "\n") "" (Str.global_replace (Str.regexp "Welcome to Coq ") "" header))
+            printf "\t\tcoqv version %s [coqtop version %s]\n\n" Flags.version_no (Str.global_replace (Str.regexp "\n") "" (Str.global_replace (Str.regexp "Welcome to Coq ") "" header))
         end else begin
             Interaction.request_coq_info cout;
             Thread.delay 0.1;
-            let buffer = Bytes.create 4096 in
-            let len = input cin buffer 0 4096 in
+            let buffer = Bytes.create !Flags.xml_bufsize in
+            let len = input cin buffer 0 !Flags.xml_bufsize in
             let header = Bytes.sub_string buffer 0 len in
             let xparser = Xml_parser.make (Xml_parser.SString header) in
             let xml_fb = Xml_parser.parse xparser in
@@ -80,7 +76,6 @@ let rec loop args =
         end;
         ignore(Thread.create worker cin);
         request_init None;
-        (*print_endline "have created worker";*)
         while !running do
             if not !running_coqv then begin
                 Mutex.lock read_write_mutex;
@@ -89,17 +84,10 @@ let rec loop args =
                 Thread.delay 0.01 (*waiting for the last input from coqtop to complete*)
             end;
             print_string "coqv> ";
-            (*let input_buffer = Bytes.create 1024 in
-            let len = input stdin input_buffer 0 1024 in
-            let input_str = Bytes.sub_string input_buffer 0 len in*)
             let input_str = read_line () in
-            (*printf "input length: %d\n" (String.length input_str);*)
             if (String.length input_str > 0) then begin
                 if String.sub input_str 0 1 = ":" then begin
-                    (*running_coqv := true;*)
                     let cmd = (String.sub input_str 1 (String.length input_str - 1)) in
-                    (*printf "command name: %s\n" cmd;
-                    flush stdout*)
                     let cmd_str_list = Str.split (Str.regexp "[ \t]+") (String.trim cmd) in
                     running_coqv := interpret_cmd cmd_str_list
                 end else begin

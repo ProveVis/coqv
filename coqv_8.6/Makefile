@@ -23,4 +23,6 @@ clean:
 	rm -f comm
 	rm -f repl
 	rm -f *.eventlog
+	rm -f log
+	rm -f *.log
 	make -C utils clean
