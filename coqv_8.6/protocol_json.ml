@@ -112,39 +112,51 @@ let json_of_msg (msg:message) =
         else 
             get_json_of_key key str_json_list'
     | [] -> printf "not find json for key %s\n" key; exit 1  *)
-
+(* 
 let get_json_of_key key json = Yojson.Basic.Util.member key json 
 
 
 let get_string_of_json json = 
     match json with
     | `String str -> str
-    | _ -> printf "%s is not a string\n" (Yojson.Basic.to_string json); exit 1
+    | _ -> printf "%s is not a string\n" (Yojson.Basic.to_string json); exit 1 *)
+
+let str_value_of_json key json = 
+    Yojson.Basic.Util.to_string (Yojson.Basic.Util.member key json)
 
 
 let msg_of_json json = 
     try
         match Yojson.Basic.Util.member "type" json with
-        | `Null -> printf "%s has no key: type" (Yojson.Basic.to_string json)
+        | `Null -> printf "%s has no key: type" (Yojson.Basic.to_string json); exit 1
         | json_value -> begin
                 match json_value with
                 | `String str -> begin
                     match str with
                         | "highlight_node" -> 
-                            Highlight_node ((get_string_of_json (get_json_of_key "session_id" str_json_list)), (get_string_of_json (get_json_of_key "node_id" str_json_list)))
+                            Highlight_node (str_value_of_json "session_id" json, str_value_of_json "node_id" json)
+                            (* Highlight_node ((get_string_of_json (get_json_of_key "session_id" str_json_list)), (get_string_of_json (get_json_of_key "node_id" str_json_list))) *)
                         | "unhighlight_node" -> 
-                            Unhighlight_node ((get_string_of_json (get_json_of_key "session_id" str_json_list)), (get_string_of_json (get_json_of_key "node_id" str_json_list)))
+                            Unhighlight_node (str_value_of_json "session_id" json, str_value_of_json "node_id" json)
+                            (* Unhighlight_node ((get_string_of_json (get_json_of_key "session_id" str_json_list)), (get_string_of_json (get_json_of_key "node_id" str_json_list))) *)
                         | "clear_color" ->
-                            Clear_color (get_string_of_json (get_json_of_key "session_id" str_json_list))
+                            Clear_color (str_value_of_json "session_id" json)
+                            (* Clear_color (get_string_of_json (get_json_of_key "session_id" str_json_list)) *)
                         | "feedback" -> 
-                            let status = get_string_of_json (get_json_of_key "status" str_json_list) in
+                            let status = str_value_of_json "status" json in
+                            if status = "OK" then
+                                Feedback_ok (str_value_of_json "session_id" json)
+                            else 
+                                Feedback_fail (str_value_of_json "session_id" json, str_value_of_json "error_msg" json)
+(*                             let status = get_string_of_json (get_json_of_key "status" str_json_list) in
                             if status = "OK" then
                                 Feedback_ok (get_string_of_json (get_json_of_key "session_id" str_json_list))
                             else
                                 Feedback_fail ((get_string_of_json (get_json_of_key "session_id" str_json_list)), (get_string_of_json (get_json_of_key "error_msg" str_json_list)))
+ *)                        
                         | _ as s -> printf "not supposed to be received by coqv: %s\n" s; exit 1
                     end
-                | _ -> printf "%s cannot be interpreted at the moment" (Yojson.Basic.to_string json_value)
+                | _ -> printf "%s cannot be interpreted at the moment" (Yojson.Basic.to_string json_value); exit 1
             end
     with
     | _ -> failwith "not a valid json value"

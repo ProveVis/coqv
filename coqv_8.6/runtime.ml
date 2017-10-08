@@ -30,6 +30,8 @@ let current_cmd_type = ref Other
 
 let vagent:(visualize_agent option) ref = ref None
 
+let current_coqtop_worker = ref "master"
+
 
 
 

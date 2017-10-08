@@ -297,7 +297,7 @@ let interpret_feedback xml_fb =
         | Processed -> printf "Processed"
         | Incomplete -> printf "Incomplete"
         | Complete -> printf "Complete"
-        | ProcessingIn worker_name -> printf "ProcessingIn worker %s" worker_name
+        | ProcessingIn worker_name -> printf "ProcessingIn worker %s" worker_name; !Runtime.current_coqtop_worker = worker_name
         | InProgress i -> printf "InProgress %d" i 
         | WorkerStatus (worker_name, status) -> printf "WorkerStatus: %s --> %s" worker_name status
         | Goals (loc, str) -> printf "Goals: %s" str 
@@ -337,6 +337,7 @@ let interpret_cmd cmd_str_list =
             | "undo_to" ->
                 let new_stateid = int_of_string (List.hd options) in
                 request_edit_at new_stateid
+            (* | "exit" ->  *)
             | _ -> print_endline "command not interpreted."
         end
     end;
@@ -372,7 +373,7 @@ let handle_answer received_str =
             other_xml_str str "</message>"            
         | None -> 
             if Xmlprotocol.is_feedback xml_str then begin
-                (*interpret_feedback xml_str;*)
+                interpret_feedback xml_str;
                 other_xml_str str "</feedback>"    
             end else begin
                 begin
