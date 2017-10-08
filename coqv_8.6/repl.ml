@@ -51,12 +51,7 @@ let rec loop args =
         
         (*input header information*)
         let running_coqv = ref false in
-        if not !Flags.xml then begin
-            let buffer = Bytes.create 1024 in
-            let len = input cin buffer 0 1024 in
-            let header = Bytes.sub_string buffer 0 len in
-            printf "\t\tcoqv version %s [coqtop version %s]\n\n" Flags.version_no (Str.global_replace (Str.regexp "\n") "" (Str.global_replace (Str.regexp "Welcome to Coq ") "" header))
-        end else begin
+        begin
             Interaction.request_coq_info cout;
             Thread.delay 0.1;
             let buffer = Bytes.create !Flags.xml_bufsize in

@@ -58,7 +58,8 @@ let response_init msg =
         Runtime.new_stateid := stateid
     | _ -> printf "unknown from response init\n"; flush stdout    
 
-let request_quit cout = 
+let request_quit () = 
+    let cout = Runtime.coq_channels.cout in
     request_mode := Request_quit;
     let quit = Xmlprotocol.quit () in
     let xml_quit = Xmlprotocol.of_call quit in
@@ -297,7 +298,7 @@ let interpret_feedback xml_fb =
         | Processed -> printf "Processed"
         | Incomplete -> printf "Incomplete"
         | Complete -> printf "Complete"
-        | ProcessingIn worker_name -> printf "ProcessingIn worker %s" worker_name; !Runtime.current_coqtop_worker = worker_name
+        | ProcessingIn worker_name -> printf "ProcessingIn worker %s" worker_name
         | InProgress i -> printf "InProgress %d" i 
         | WorkerStatus (worker_name, status) -> printf "WorkerStatus: %s --> %s" worker_name status
         | Goals (loc, str) -> printf "Goals: %s" str 
@@ -322,7 +323,7 @@ let interpret_cmd cmd_str_list =
         (*printf "Interpreting command: %s\n" cmd;*)
         begin
             match cmd with
-            | "init" -> request_init None; running_coqv := false
+            (*| "init" -> request_init None; running_coqv := false*)
             | "status" -> print_endline (Status.str_status ())
             | "history" -> print_endline (History.str_history ())
             | "proof" -> 
@@ -337,7 +338,9 @@ let interpret_cmd cmd_str_list =
             | "undo_to" ->
                 let new_stateid = int_of_string (List.hd options) in
                 request_edit_at new_stateid
-            (* | "exit" ->  *)
+            | "quit" -> 
+                request_quit ();
+                exit 0
             | _ -> print_endline "command not interpreted."
         end
     end;
