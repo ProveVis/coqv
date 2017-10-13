@@ -10,3 +10,4 @@ comm
 log
 *.log
 /coqv_8.6/.vscode/
+.DS_Store
