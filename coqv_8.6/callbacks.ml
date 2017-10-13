@@ -8,7 +8,7 @@ open History
 
 let on_new_session (session: session) = 
     current_session_id := session.name;
-    printf "current session id: %s\n" session.name;
+    (* printf "current session id: %s\n" session.name; *)
     flush stdout;
     assert(List.length !moduls > 0);
     add_session_to_modul (List.hd !moduls) session;
@@ -17,7 +17,7 @@ let on_new_session (session: session) =
     History.record_step !Runtime.new_stateid (Add_node node.id);
     begin
         match !Runtime.vagent with
-        | None -> print_endline "no vmdv agent currently"
+        | None -> (*print_endline "no vmdv agent currently"*)()
         | Some vagt -> 
             Communicate.create_session vagt session;
             Communicate.add_node vagt session.name node
@@ -34,7 +34,7 @@ let on_add_node node_from node_to state =
     node_to.state <- state;
     begin
         match !Runtime.vagent with
-        | None -> print_endline "no vmdv agent currently"
+        | None -> (*print_endline "no vmdv agent currently"*)()
         | Some vagt ->
             let sid = !Proof_model.current_session_id in
             if sid <> "" then begin

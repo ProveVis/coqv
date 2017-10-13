@@ -40,7 +40,7 @@ let str_proof_tree sn_path =
                 let cmd, clist = Proof_model.children current_node proof_tree in
                 str_buf := !str_buf ^ "(" ^ cmd ^ ")\t[";
                 List.iter (fun c -> str_buf := !str_buf ^ c ^ " "; Queue.push c node_queue) clist;
-                str_buf := !str_buf ^ "]\n";
+                str_buf := !str_buf ^ "]\n\n";
             with Not_found -> begin
                 str_buf := !str_buf ^ "\t[]\n"
             end

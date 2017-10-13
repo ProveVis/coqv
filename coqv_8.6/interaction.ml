@@ -83,7 +83,7 @@ let response_goals msg =
     (*print_endline "received response from goals.................";*)
     match msg with
     | Good None -> 
-        print_endline "**************no more goals****************";
+        (* print_endline "**************no more goals****************"; *)
         begin
             match !Runtime.current_cmd_type with
             | Qed -> 
@@ -376,7 +376,7 @@ let handle_answer received_str =
             other_xml_str str "</message>"            
         | None -> 
             if Xmlprotocol.is_feedback xml_str then begin
-                interpret_feedback xml_str;
+                (* interpret_feedback xml_str; *)
                 other_xml_str str "</feedback>"    
             end else begin
                 begin

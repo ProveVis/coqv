@@ -12,9 +12,9 @@ let read_write_mutex = Mutex.create ()
 let worker cin =     
     let buffer = Bytes.create !Flags.xml_bufsize in
     while !Runtime.running do
-        print_endline "wait for coqtop";
+        (* print_endline "wait for coqtop"; *)
         let len = input cin buffer 0 !Flags.xml_bufsize in
-        print_endline "coqtop responsed";
+        (* print_endline "coqtop responsed"; *)
         if len = 0 then
             running := false
         else begin
