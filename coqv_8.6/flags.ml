@@ -4,4 +4,5 @@ let xml_bufsize = ref 4096 (* buffer size when receiving a message from coqtop *
 let json_bufsize = ref 4096 (* buffer size when receiving a message from vmdv *)
 let xml_log_file = ref "log_xml.log" (* logging xml messages *)
 let json_log_file = ref "log_json.log" (* logging json messages *)
+let debug = ref false (*using debug mode or not*)
 

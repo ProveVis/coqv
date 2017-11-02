@@ -49,7 +49,8 @@ let request_init filename =
     request_mode := Request_init;
     let init = Xmlprotocol.init filename in
     let xml_init = Xmlprotocol.of_call init in
-    Xml_printer.print (Xml_printer.TChannel cout) xml_init
+    Xml_printer.print (Xml_printer.TChannel cout) xml_init;
+    log_coqtop true (Xml_printer.to_string xml_init)
 
 let response_init msg = 
     match msg with
@@ -63,7 +64,8 @@ let request_quit () =
     request_mode := Request_quit;
     let quit = Xmlprotocol.quit () in
     let xml_quit = Xmlprotocol.of_call quit in
-    Xml_printer.print (Xml_printer.TChannel cout) xml_quit
+    Xml_printer.print (Xml_printer.TChannel cout) xml_quit;
+    log_coqtop true (Xml_printer.to_string xml_quit)
 
 let response_quit msg = 
     match msg with
@@ -77,7 +79,8 @@ let request_goals () =
     request_mode := Request_goals;
     let goals = Xmlprotocol.goals () in
     let xml_goals = Xmlprotocol.of_call goals in
-    Xml_printer.print (Xml_printer.TChannel cout) xml_goals
+    Xml_printer.print (Xml_printer.TChannel cout) xml_goals;
+    log_coqtop true (Xml_printer.to_string xml_goals)
 
 let response_goals msg =
     (*print_endline "received response from goals.................";*)
@@ -102,7 +105,9 @@ let request_add cmd editid stateid verbose =
     let add = Xmlprotocol.add ((ecmd, editid), (stateid, verbose)) in
     let xml_add = Xmlprotocol.of_call add in
     Xml_printer.print (Xml_printer.TChannel cout) xml_add;
-    Doc_model.cache := Some (stateid, cmd)
+    log_coqtop true (Xml_printer.to_string xml_add);
+    (* Doc_model.cache := Some (stateid, cmd) *)
+    Doc_model.try_add cmd
 
 let response_add msg cmd =
     begin
@@ -111,13 +116,15 @@ let response_add msg cmd =
             if String.trim content <> "" then 
                 printf "new state id: %d, message content: %s\n" stateid content;
             Runtime.new_stateid := stateid;
-            Doc_model.add_to_doc (stateid, cmd);
+            (* Doc_model.add_to_doc (stateid, cmd); *)
+            Doc_model.finish_add stateid;
             flush stdout
         | Good (stateid, (CSig.Inr next_stateid, content)) ->
             if String.trim content <> "" then 
                 printf "finished current proof, move to state id: %d, message content: %s\n" next_stateid content;
             Runtime.new_stateid := next_stateid;
-            Doc_model.add_to_doc (next_stateid, cmd);
+            (* Doc_model.add_to_doc (next_stateid, cmd); *)
+            Doc_model.finish_add stateid;
             flush stdout
         | Fail (stateid, _, xml_content) -> 
             printf "error add in state id %d, message content: " stateid;
@@ -135,7 +142,8 @@ let request_edit_at stateid =
     request_mode := Request_edit_at stateid;
     let editat = Xmlprotocol.edit_at stateid in
     let xml_editat = Xmlprotocol.of_call editat in
-    Xml_printer.print (Xml_printer.TChannel cout) xml_editat
+    Xml_printer.print (Xml_printer.TChannel cout) xml_editat;
+    log_coqtop true (Xml_printer.to_string xml_editat)
 
 let response_edit_at msg stateid =
     begin
@@ -166,7 +174,8 @@ let request_query query stateid =
     request_mode := Request_query;
     let query = Xmlprotocol.query query in
     let xml_query = Xmlprotocol.of_call query in
-    Xml_printer.print (Xml_printer.TChannel cout) xml_query
+    Xml_printer.print (Xml_printer.TChannel cout) xml_query;
+    log_coqtop true (Xml_printer.to_string xml_query)
 
 let response_query msg = 
     match msg with
@@ -178,7 +187,8 @@ let request_evars () =
     request_mode := Request_evars;
     let evars = Xmlprotocol.evars () in
     let xml_evars = Xmlprotocol.of_call evars in
-    Xml_printer.print (Xml_printer.TChannel cout) xml_evars
+    Xml_printer.print (Xml_printer.TChannel cout) xml_evars;
+    log_coqtop true (Xml_printer.to_string xml_evars)
 
 let response_evars msg =
     print_endline "response evars, not finished."
@@ -188,7 +198,8 @@ let request_hints () =
     request_mode := Request_hints;
     let hints = Xmlprotocol.hints () in
     let xml_hints = Xmlprotocol.of_call hints in
-    Xml_printer.print (Xml_printer.TChannel cout) xml_hints
+    Xml_printer.print (Xml_printer.TChannel cout) xml_hints;
+    log_coqtop true (Xml_printer.to_string xml_hints)
 
 let response_hints msg =
     print_endline "response hints, not finished."
@@ -198,7 +209,8 @@ let request_status force =
     request_mode := Request_status;
     let status = Xmlprotocol.status force in
     let xml_status = Xmlprotocol.of_call status in
-    Xml_printer.print (Xml_printer.TChannel cout) xml_status
+    Xml_printer.print (Xml_printer.TChannel cout) xml_status;
+    log_coqtop true (Xml_printer.to_string xml_status)
 
 let response_status msg =
     print_endline "response status, not finished"
@@ -208,7 +220,8 @@ let request_search search_list =
     request_mode := Request_search;
     let search = Xmlprotocol.search search_list in
     let xml_search = Xmlprotocol.of_call search in
-    Xml_printer.print (Xml_printer.TChannel cout) xml_search
+    Xml_printer.print (Xml_printer.TChannel cout) xml_search;
+    log_coqtop true (Xml_printer.to_string xml_search)
 
 let response_search msg = 
     print_endline "response search, not finished"
@@ -218,7 +231,8 @@ let request_getoptions () =
     request_mode := Request_getoptions;
     let getoptions = Xmlprotocol.get_options () in
     let xml_getoptions = Xmlprotocol.of_call getoptions in
-    Xml_printer.print (Xml_printer.TChannel cout) xml_getoptions
+    Xml_printer.print (Xml_printer.TChannel cout) xml_getoptions;
+    log_coqtop true (Xml_printer.to_string xml_getoptions)
 
 let response_getoptions msg = 
     print_endline "response getoptions, not finished"
@@ -228,7 +242,8 @@ let request_setoptions options =
     request_mode := Request_setoptions;
     let setoptions = Xmlprotocol.set_options options in
     let xml_setoptions = Xmlprotocol.of_call setoptions in
-    Xml_printer.print (Xml_printer.TChannel cout) xml_setoptions
+    Xml_printer.print (Xml_printer.TChannel cout) xml_setoptions;
+    log_coqtop true (Xml_printer.to_string xml_setoptions)
 
 let response_setoptions msg = 
     print_endline "response setoptions, not finished"
@@ -238,7 +253,8 @@ let request_mkcases str =
     request_mode := Request_mkcases;
     let mkcases = Xmlprotocol.mkcases str in
     let xml_mkcases = Xmlprotocol.of_call mkcases in
-    Xml_printer.print (Xml_printer.TChannel cout) xml_mkcases
+    Xml_printer.print (Xml_printer.TChannel cout) xml_mkcases;
+    log_coqtop true (Xml_printer.to_string xml_mkcases)
 
 let response_mkcases msg = 
     print_endline "response mkcases, not finished"
@@ -248,7 +264,8 @@ let request_interp interp =
     request_mode := Request_interp;
     let interp = Xmlprotocol.interp interp in
     let xml_interp = Xmlprotocol.of_call interp in
-    Xml_printer.print (Xml_printer.TChannel cout) xml_interp
+    Xml_printer.print (Xml_printer.TChannel cout) xml_interp;
+    log_coqtop true (Xml_printer.to_string xml_interp)
 
 let response_interp msg = 
     print_endline "response interp, not finished"
@@ -258,7 +275,8 @@ let request_stopworker str =
     request_mode := Request_stopworker;
     let stopworker = Xmlprotocol.stop_worker str in
     let xml_stopworker = Xmlprotocol.of_call stopworker in
-    Xml_printer.print (Xml_printer.TChannel cout) xml_stopworker
+    Xml_printer.print (Xml_printer.TChannel cout) xml_stopworker;
+    log_coqtop true (Xml_printer.to_string xml_stopworker)
 
 let response_stopworker msg = 
     print_endline "response stopworker, not finished"
@@ -268,7 +286,8 @@ let request_printast stateid =
     request_mode := Request_printast;
     let printast = Xmlprotocol.print_ast stateid in
     let xml_printast = Xmlprotocol.of_call printast in
-    Xml_printer.print (Xml_printer.TChannel cout) xml_printast
+    Xml_printer.print (Xml_printer.TChannel cout) xml_printast;
+    log_coqtop true (Xml_printer.to_string xml_printast)
 
 let response_printast msg = 
     print_endline "response printast, not finished"
@@ -278,7 +297,8 @@ let request_annotate str =
     request_mode := Request_annotate;
     let annotate = Xmlprotocol.annotate str in
     let xml_annotate = Xmlprotocol.of_call annotate in
-    Xml_printer.print (Xml_printer.TChannel cout) xml_annotate
+    Xml_printer.print (Xml_printer.TChannel cout) xml_annotate;
+    log_coqtop true (Xml_printer.to_string xml_annotate)
 
 let response_annotate msg = 
     print_endline "response annotate, not finished"
@@ -352,6 +372,7 @@ let handle_input input_str cout =
     (*print_endline ("current_cmd_type: "^(Cmd.str_cmd_type !Cmd.current_cmd_type));*)
     (*request_mode := Request_init;*)
     request_add (input_str) (-1) !Runtime.new_stateid true;
+    log_coqtop true input_str;
     flush stdout
 
 let other_xml_str xml_str tag = 
@@ -362,6 +383,7 @@ let other_xml_str xml_str tag =
 
 let handle_answer received_str = 
     let fb_str = Str.global_replace (ignored_re ()) "" received_str in
+    log_coqtop false fb_str;
     (*printf "got feedback message length: %d\n" (String.length fb_str);
     printf "received: %s\n\n" fb_str;*)
     let handle str = 

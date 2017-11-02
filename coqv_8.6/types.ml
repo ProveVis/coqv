@@ -86,4 +86,6 @@ type cmd_type =
     | End of string
     | Proof of string * proof_kind
     | Qed
+    | Focus of int
+    | Unfocus
     | Other

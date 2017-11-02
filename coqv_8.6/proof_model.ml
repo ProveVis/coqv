@@ -39,9 +39,11 @@ let closing_modul name =
     if name = fst_modul.name then begin
         Hashtbl.add snd_top_modul.modul_tbl name fst_modul;
         moduls := List.tl !moduls
-    end else begin
+    end else
+        ()
+    (*begin
         raise (Closing_wrong_module (fst_modul.name, name))  
-    end
+    end*)
 
 let current_proof_tree () = 
     match !current_session_id with

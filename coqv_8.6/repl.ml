@@ -107,6 +107,11 @@ let _ =
                         Runtime.vagent := Some (Communicate.get_visualize_agent s)
                     with _ -> print_endline ("connect to vmdv in "^s^" failed.")
                 ), "\tIP address of the VMDV.";
+            "-debug", Arg.Bool (fun b -> 
+                    Flags.debug := b;
+                    if b then 
+                        Runtime.logs := Some {coqtop_log = open_out !Flags.xml_log_file; vmdv_log = open_out !Flags.json_log_file}
+                ), "\tUsing debug mode or not."
         ]
         (fun s -> print_endline ("unknown option"^s))
         "Usage: coqv [-ip <ip_address>]";

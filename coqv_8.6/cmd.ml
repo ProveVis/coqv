@@ -50,6 +50,8 @@ let get_cmd_type cmd =
     | "Fact" :: tl_split -> Proof (List.hd tl_split, Fact)
     | "Goal" :: tl_split -> Proof ("Unnamed_thm", Goal)
     | "Qed" :: tl_split -> Qed
+    | "Focus" :: tl_split -> Focus (int_of_string (List.hd tl_split))
+    | "Unfocus" :: tl_split -> Unfocus 
     | _ -> Other
 
 let str_cmd_type ct = 
@@ -58,4 +60,6 @@ let str_cmd_type ct =
     | End mname -> "End "^mname
     | Proof (thm_name, pk) -> "Proof "^(str_proof_kind pk)^" "^thm_name
     | Qed -> "Qed"
+    | Focus _ -> "Focus"
+    | Unfocus -> "Unfocus"
     | Other -> "Other"
