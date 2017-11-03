@@ -5,9 +5,9 @@ open Coqv_utils
 open Types
 open Interface
 open History
-
+(* 
 let focused_goalid = ref 0
-let last_goalid_list = ref []
+let last_goalid_list = ref [] *)
 
 let on_new_session (session: session) = 
     current_session_id := session.name;
@@ -27,8 +27,10 @@ let on_new_session (session: session) =
     end
 
 let on_change_node_state node state = 
-    History.record_step !Runtime.new_stateid (Change_state (node.id, node.state));
-    change_node_state node.id state
+    if node.state <> state then begin
+        History.record_step !Runtime.new_stateid (Change_state (node.id, node.state));
+        change_node_state node.id state
+    end
 
 let on_add_node node_from node_to state = 
     let label = (snd (List.hd !Doc_model.doc)) in
@@ -70,7 +72,7 @@ let on_receive_goals cmd_type goals =
         | Qed -> 
             current_session_id := "";
             History.record_step !Runtime.new_stateid Dummy
-
+(* 
 ***should be rewritten***
         | Focus gid ->
             let chosen_node = select_chosen_node () in begin
@@ -96,7 +98,7 @@ let on_receive_goals cmd_type goals =
             end else begin
                 print_endline "cannot find a goal to unfocus";
                 exit 1
-            end
+            end *)
         | Other -> 
             let fg_goals = goals.fg_goals in
             let chosen_node = select_chosen_node () in
@@ -112,12 +114,19 @@ let on_receive_goals cmd_type goals =
                     stateid = !Runtime.new_stateid;
                 }) fg_goals in
                 last_goalid_list := List.map (fun n -> n.id) new_nodes;
-                if !focused_goalid <> 0 then    (*if the previous focued*)
-                    List.iter (fun n->if n.id=!focused_goalid then focused_goalid := 0) new_nodes;
+                (* if !focused_goalid <> 0 then    (*if the previous focued*)
+                    List.iter (fun n->if n.id=!focused_goalid then focused_goalid := 0) new_nodes; *)
                 if List.length new_nodes = 0 then begin
                     print_endline "No more goals, shall change the focused node into proved.";
                     on_change_node_state cnode Proved
                 end else begin
+                    let node, others = List.hd new_nodes, List.tl new_nodes in
+                    
+                end
+                
+                
+                
+                begin
                     let node, other_nodes = List.hd new_nodes, List.tl new_nodes in 
                         if node_exists node.id then begin
                             if node.id <> cnode.id then begin
