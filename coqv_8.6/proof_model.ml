@@ -150,7 +150,9 @@ let add_edge from_node to_node tatic =
             Hashtbl.add proof_tree.nodes to_node.id to_node;
         if Hashtbl.mem proof_tree.edges from_node.id then begin
             let (t, nl) = Hashtbl.find proof_tree.edges from_node.id in
-            if not (List.mem to_node.id nl) then
+            if nl = [] then
+                Hashtbl.replace proof_tree.edges from_node.id (tatic, [to_node.id])
+            else if not (List.mem to_node.id nl) then
                 Hashtbl.replace proof_tree.edges from_node.id (t, to_node.id :: nl)
         end else begin
             Hashtbl.add proof_tree.edges from_node.id (tatic, [to_node.id])    
@@ -159,6 +161,11 @@ let add_edge from_node to_node tatic =
         printf "cannot find where to add node %s\n" to_node.id;
         flush stdout
     end
+
+let add_rule_label nodeid tactic = 
+    let proof_tree = current_proof_tree () in
+    if not (Hashtbl.mem proof_tree.edges nodeid) then
+        Hashtbl.add proof_tree.edges nodeid (tactic, [])
 
 let new_session sname skind sstate proof_tree = 
     {

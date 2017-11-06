@@ -361,6 +361,12 @@ let interpret_cmd cmd_str_list =
             | "quit" -> 
                 request_quit ();
                 exit 0
+            | "export" ->
+                let eout = open_out (List.hd options) in
+                let cmd_list = List.rev !Doc_model.doc in
+                List.iter (fun (stateid, cmd) -> output_string eout cmd; output_string eout "\n"; if cmd="Qed." then output_string eout "\n") cmd_list;
+                flush eout;
+                close_out eout
             | _ -> print_endline "command not interpreted."
         end
     end;

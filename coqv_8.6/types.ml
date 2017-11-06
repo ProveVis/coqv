@@ -87,5 +87,5 @@ type cmd_type =
     | Proof of string * proof_kind
     | Qed
     | Focus of int
-    | Unfocus
+    (* | Unfocus *)
     | Other

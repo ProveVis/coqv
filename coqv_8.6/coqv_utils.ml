@@ -60,6 +60,7 @@ let str_cmd_type ct =
     | End mname -> "End "^mname
     | Proof (thm_name, pk) -> "Proof "^(str_proof_kind pk)^" "^thm_name
     | Qed -> "Qed"
+    | Focus _ -> "Focus"
     | Other -> "Other"
 
 let rec richpp_to_string richpp = 

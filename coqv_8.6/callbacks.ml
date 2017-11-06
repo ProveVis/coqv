@@ -26,7 +26,7 @@ let on_new_session (session: session) =
             Communicate.add_node vagt session.name node
     end
 
-let on_change_node_state node state = 
+let on_change_node_state (node:node) state = 
     if node.state <> state then begin
         History.record_step !Runtime.new_stateid (Change_state (node.id, node.state));
         change_node_state node.id state
@@ -47,6 +47,49 @@ let on_add_node node_from node_to state =
                 Communicate.add_edge vagt sid node_from.id node_to.id label    
             end
     end
+
+
+let add_new_goals focus_mode goals =     
+    let fg_goals = goals.fg_goals in
+    let chosen_node = select_chosen_node () in
+    (match chosen_node with
+    | None -> print_endline "No focus node, maybe the proof tree is complete"
+    | Some cnode -> 
+        let new_nodes : node list = List.map (fun g -> 
+        {
+            id = g.goal_id;
+            label = goal_to_label g;
+            state = To_be_chosen;
+            parent = cnode;
+            stateid = !Runtime.new_stateid;
+        }) fg_goals in
+        if List.length new_nodes = 0 then begin
+            print_endline "No more goals.";
+            on_change_node_state cnode Proved;
+            add_rule_label cnode.id (snd (List.hd !Doc_model.doc))
+        end else begin
+            if not focus_mode then begin
+                let has_new = List.fold_left (fun b n -> 
+                    if b then 
+                        b 
+                    else
+                        not (node_exists n.id) 
+                    ) false new_nodes in
+                if not has_new then begin
+                    on_change_node_state cnode Proved;
+                    add_rule_label cnode.id (snd (List.hd !Doc_model.doc))
+                end
+            end;
+            List.iter (fun n ->
+                if node_exists n.id then
+                    on_change_node_state (get_node n.id) To_be_chosen
+                else begin
+                    on_add_node cnode n To_be_chosen;
+                    on_change_node_state cnode Not_proved
+                end         
+            ) new_nodes;
+            on_change_node_state (List.hd new_nodes) Chosen
+        end)               
 
 
 let on_receive_goals cmd_type goals = 
@@ -72,88 +115,12 @@ let on_receive_goals cmd_type goals =
         | Qed -> 
             current_session_id := "";
             History.record_step !Runtime.new_stateid Dummy
-(* 
-***should be rewritten***
-        | Focus gid ->
-            let chosen_node = select_chosen_node () in begin
-                match chosen_node with
-                | None -> print_endline ("cannot focus on goal "^(string_of_int gid))
-                | Some cnode -> 
-                    on_change_node_state cnode To_be_chosen;
-                    on_change_node_state (get_node gid) Chosen;
-                    focused_goalid := gid
-            end
-        | Unfocus ->
-            if !focused_goalid <> 0 then begin
-                let fnode = get_node !focused_goalid in
-                if fnode.state <> Proved then begin
-                    let chosen_node = select_chosen_node () in begin
-                        match chosen_node with
-                        | None -> ()
-                        | Some cnode -> on_change_node_state cnode To_be_chosen
-                    end;
-                    on_change_node_state fnode Chosen
-                end;
-                focused_goalid := 0
-            end else begin
-                print_endline "cannot find a goal to unfocus";
-                exit 1
-            end *)
+        | Focus _ ->
+            add_new_goals true goals
         | Other -> 
-            let fg_goals = goals.fg_goals in
-            let chosen_node = select_chosen_node () in
-            (match chosen_node with
-            | None -> print_endline "No focus node, maybe the proof tree is complete"
-            | Some cnode -> 
-                let new_nodes : node list = List.map (fun g -> 
-                {
-                    id = g.goal_id;
-                    label = goal_to_label g;
-                    state = To_be_chosen;
-                    parent = cnode;
-                    stateid = !Runtime.new_stateid;
-                }) fg_goals in
-                last_goalid_list := List.map (fun n -> n.id) new_nodes;
-                (* if !focused_goalid <> 0 then    (*if the previous focued*)
-                    List.iter (fun n->if n.id=!focused_goalid then focused_goalid := 0) new_nodes; *)
-                if List.length new_nodes = 0 then begin
-                    print_endline "No more goals, shall change the focused node into proved.";
-                    on_change_node_state cnode Proved
-                end else begin
-                    let node, others = List.hd new_nodes, List.tl new_nodes in
-                    
-                end
-                
-                
-                
-                begin
-                    let node, other_nodes = List.hd new_nodes, List.tl new_nodes in 
-                        if node_exists node.id then begin
-                            if node.id <> cnode.id then begin
-                                on_change_node_state cnode Proved;
-                                let node_to_chose = get_node node.id in
-                                on_change_node_state node_to_chose Chosen;
-                                (* focused_goalid := node.id; *)
-                                (* node_to_chose.stateid <- !Runtime.new_stateid; *)
-                                node_to_chose.stateid <- Doc_model.nth_last_stateid 1;
-                                List.iter (fun n ->
-                                    let node = get_node n.id in
-                                    on_change_node_state node To_be_chosen;
-                                    node.stateid <- !Runtime.new_stateid
-                                ) other_nodes
-                            end
-                        end else begin
-                            on_change_node_state cnode Not_proved;
-                            on_add_node cnode node Chosen;
-                            (* focused_goalid := node.id; *)
-                            List.iter (fun (n:node) -> if not (node_exists n.id) then begin
-                                    on_add_node cnode n To_be_chosen
-                                end
-                            ) other_nodes
-                        end
-                end)
-            end                
-
+            add_new_goals false goals
+    end
+            
 
 let on_edit_at stateid = 
     Doc_model.move_focus_to stateid;
