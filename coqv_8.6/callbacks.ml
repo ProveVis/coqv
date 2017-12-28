@@ -48,7 +48,6 @@ let on_add_node node_from node_to state =
             end
     end
 
-
 let add_new_goals focus_mode goals =     
     let fg_goals = goals.fg_goals in
     let chosen_node = select_chosen_node () in
