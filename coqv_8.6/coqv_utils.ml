@@ -32,13 +32,19 @@ let caught_str str =
     Str.global_replace (Str.regexp "&quot;") "\"" |>
     Str.global_replace (Str.regexp "&amp;") "&" |>
     Str.global_replace (Str.regexp "&gt;") ">" |>
-    Str.global_replace (Str.regexp "&lt;") "<"
+    Str.global_replace (Str.regexp "&lt;") "<" |>
+    Str.global_replace (Str.regexp "  ") " " |>
+    Str.global_replace (Str.regexp "( ") "(" |>
+    Str.global_replace (Str.regexp " )") ")" |>
+    Str.global_replace (Str.regexp " , ") ", " |>
+    Str.global_replace (Str.regexp " : ") ": "
 
 
 let get_cmd_type cmd =
     let tcmd = String.trim cmd in
     let splited = Str.split (Str.regexp "[ \t<:\\.]+") tcmd in
-    match splited with
+    match List.map (fun s -> String.trim s) splited with
+    | [] -> print_endline ("empty command: "^cmd); exit 1
     | "Module" :: tl_split -> 
         if List.hd (List.tl splited) <> "Type" then
             Module (List.hd tl_split)

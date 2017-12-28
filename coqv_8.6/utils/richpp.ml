@@ -196,7 +196,7 @@ let richpp_of_pp pp =
 let raw_print xml =
   let buf = Buffer.create 1024 in
   let rec print = function
-  | PCData s -> Buffer.add_string buf s
+  | PCData s -> Buffer.add_string buf (s^" ")
   | Element (_, _, cs) -> List.iter print cs
   in
   let () = print xml in

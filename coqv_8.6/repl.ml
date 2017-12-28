@@ -92,7 +92,7 @@ let rec loop args =
                         print_string "    > ";
                         str_buffer := !str_buffer ^ (read_line ())
                     done;
-                    handle_input !str_buffer cout
+                    handle_input !str_buffer
                 end
             end else 
                 running_coqv := true

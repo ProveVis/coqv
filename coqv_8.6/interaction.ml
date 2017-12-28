@@ -334,45 +334,9 @@ let interpret_feedback xml_fb =
     (*printf "route: %d\n" fb.route;*)
     flush stdout
 
-let interpret_cmd cmd_str_list = 
-    let running_coqv = ref true in
-    begin
-        match cmd_str_list with
-        | [] -> ()
-        | cmd :: options -> 
-        (*printf "Interpreting command: %s\n" cmd;*)
-        begin
-            match cmd with
-            (*| "init" -> request_init None; running_coqv := false*)
-            | "status" -> print_endline (Status.str_status ())
-            | "history" -> print_endline (History.str_history ())
-            | "proof" -> 
-                if options = [] then
-                    begin
-                        match !Proof_model.current_session_id with
-                        | "" -> print_endline "not in proof mode"
-                        | sname -> print_endline (Status.str_proof_tree sname)    
-                    end
-                else 
-                    List.iter (fun a -> print_endline (Status.str_proof_tree a)) options
-            | "undo_to" ->
-                let new_stateid = int_of_string (List.hd options) in
-                request_edit_at new_stateid
-            | "quit" -> 
-                request_quit ();
-                exit 0
-            | "export" ->
-                let eout = open_out (List.hd options) in
-                let cmd_list = List.rev !Doc_model.doc in
-                List.iter (fun (stateid, cmd) -> output_string eout cmd; output_string eout "\n"; if cmd="Qed." then output_string eout "\n") cmd_list;
-                flush eout;
-                close_out eout
-            | _ -> print_endline "command not interpreted."
-        end
-    end;
-    !running_coqv
 
-let handle_input input_str cout = 
+
+let handle_input input_str = 
     (*output_string stdout (input_str^"\n");*)
     Runtime.current_cmd_type := get_cmd_type input_str;
     (*print_endline ("current_cmd_type: "^(Cmd.str_cmd_type !Cmd.current_cmd_type));*)
@@ -388,11 +352,14 @@ let other_xml_str xml_str tag =
     other_str
 
 let handle_answer received_str = 
-    let fb_str = Str.global_replace (ignored_re ()) "" received_str in
+    (* let fb_str = Str.global_replace (ignored_re ()) "" received_str in *)
+    let fb_str = received_str in
+    (* print_endline fb_str; *)
     log_coqtop false fb_str;
     (*printf "got feedback message length: %d\n" (String.length fb_str);
     printf "received: %s\n\n" fb_str;*)
     let handle str = 
+        try
         let xparser = Xml_parser.make (Xml_parser.SString str) in
         let xml_str = Xml_parser.parse xparser in
         match Xmlprotocol.is_message xml_str with
@@ -432,9 +399,84 @@ let handle_answer received_str =
                     | Request_annotate ->   response_annotate (Xmlprotocol.to_answer (Xmlprotocol.annotate "") xml_str)
                 end;
                 other_xml_str str "</value>"
-            end in
+            end 
+        with Xml_parser.Error e -> print_endline ("Error when handling "^str); exit 1
+        in
     let to_be_handled = ref fb_str in
     while !to_be_handled <> "" do
         to_be_handled := handle !to_be_handled
     done
     
+
+let interpret_cmd cmd_str_list = 
+    let running_coqv = ref true in
+    begin
+        match cmd_str_list with
+        | [] -> ()
+        | cmd :: options -> 
+        (*printf "Interpreting command: %s\n" cmd;*)
+        begin
+            match cmd with
+            (*| "init" -> request_init None; running_coqv := false*)
+            | "status" -> print_endline (Status.str_status ())
+            | "history" -> print_endline (History.str_history ())
+            | "proof" -> 
+                if options = [] then
+                    begin
+                        match !Proof_model.current_session_id with
+                        | "" -> print_endline "not in proof mode"
+                        | sname -> print_endline (Status.str_proof_tree sname)    
+                    end
+                else 
+                    List.iter (fun a -> print_endline (Status.str_proof_tree a)) options
+            | "undo_to" ->
+                let new_stateid = int_of_string (List.hd options) in
+                request_edit_at new_stateid
+            | "quit" -> 
+                request_quit ();
+                exit 0
+            | "export" ->
+                let eout = open_out (List.hd options) in
+                let cmd_list = List.rev !Doc_model.doc in
+                List.iter (fun (stateid, cmd) -> output_string eout cmd; output_string eout "\n"; if cmd="Qed." then output_string eout "\n") cmd_list;
+                flush eout;
+                close_out eout
+            | "import" ->
+                let inpt = open_in (List.hd options) in
+                let cmd_strs = ref [] in
+                let lineno = ref 1 in
+                let chars_to_string chars = 
+                    String.trim (String.init (List.length chars) (fun i -> List.nth chars i)) in
+                let inpt_buffer = ref [] in begin
+                    try
+                        while true do
+                            let c = input_char inpt in
+                            match c with
+                            | '\n' -> 
+                                incr lineno; 
+                                if List.length !inpt_buffer > 0 && List.nth !inpt_buffer (List.length !inpt_buffer - 1) <> ' ' then  
+                                    inpt_buffer := !inpt_buffer @ [' ']
+                            | '.' -> let cmd_str = chars_to_string (!inpt_buffer @ ['.']) in cmd_strs := !cmd_strs @ [cmd_str]; inpt_buffer := []
+                            | _ -> inpt_buffer := !inpt_buffer @ [c]
+                        done
+                    with
+                        End_of_file ->
+                            if (chars_to_string !inpt_buffer = "") then begin
+                                let current_line = ref 1 in
+                                List.iter (fun cmd_str -> handle_input cmd_str; Thread.delay 1.0; printf "Sent: %s\n" cmd_str; incr current_line) !cmd_strs;
+                                printf "Successfully read from file %s\n" (List.hd options);
+                                flush stdout
+                            end else begin
+                                printf "read file %s error: line %d\n" (List.hd options) !lineno;
+                                flush stdout
+                            end
+                end
+            | "help" -> begin
+                    match options with
+                    | [] -> List.iter (fun (cmd, args, usage) -> printf "%s %s: %s\n" cmd args usage; flush stdout) Coqv_doc.commands 
+                    | _ -> List.iter (fun (cmd, args, usage) -> if List.mem cmd options then begin printf "%s %s: %s\n" cmd args usage; flush stdout end) Coqv_doc.commands 
+                end
+            | _ -> print_endline "command not interpreted."
+        end
+    end;
+    !running_coqv
