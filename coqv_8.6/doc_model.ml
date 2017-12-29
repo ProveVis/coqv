@@ -17,7 +17,7 @@ let coqtop_processing sid =
 let coqtop_processed sid = 
     if sid > !processed_stateid then
         processed_stateid := sid
-let coqtop_is_processed () = !processed_stateid > 0 && !processed_stateid >= !processing_stateid
+let coqtop_is_processed () = !processed_stateid >= !processing_stateid
 
 let goal_responsed = ref true
 

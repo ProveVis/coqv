@@ -3,7 +3,6 @@ open Runtime
 open Types
 open Lexing
 open Interface
-(* open Cmd *)
 open Proof_model
 open History
 open Feedback
@@ -12,7 +11,6 @@ open Stateid
 open CSig
 open Callbacks
 open Coqv_utils
-(*open Parser*)
 
 let batch_commands = ref []
 
@@ -57,7 +55,6 @@ let request_init filename =
 let response_init msg = 
     match msg with
     | Good stateid -> 
-        (*print_endline ("got new stateid: "^(string_of_int stateid)); *)
         Runtime.new_stateid := stateid
     | _ -> printf "unknown from response init\n"; flush stdout    
 
@@ -72,8 +69,9 @@ let request_quit () =
 let response_quit msg = 
     match msg with
     | Good _ -> 
-        print_endline ("now quit! "); 
+        print_string ("now quit! \n"); 
         Runtime.running := false
+        (* exit 0 *)
     | _ -> printf "unknown from response quit\n"; flush stdout  
 
 let request_goals () =
@@ -85,11 +83,9 @@ let request_goals () =
     log_coqtop true (Xml_printer.to_string xml_goals)
 
 let response_goals msg =
-    (*print_endline "received response from goals.................";*)
     begin
     match msg with
     | Good None -> 
-        (* print_endline "**************no more goals****************"; *)
         begin
             match !Runtime.current_cmd_type with
             | Qed -> 
@@ -112,7 +108,6 @@ let request_add cmd editid stateid verbose =
     let xml_add = Xmlprotocol.of_call add in
     Xml_printer.print (Xml_printer.TChannel cout) xml_add;
     log_coqtop true (Xml_printer.to_string xml_add);
-    (* Doc_model.cache := Some (stateid, cmd) *)
     Doc_model.try_add cmd
 
 let response_add msg cmd =
@@ -122,26 +117,21 @@ let response_add msg cmd =
             if String.trim content <> "" then 
                 printf "new state id: %d, message content: %s\n" stateid content;
             Runtime.new_stateid := stateid;
-            (* Doc_model.add_to_doc (stateid, cmd); *)
             Doc_model.finish_add stateid;
             flush stdout
         | Good (stateid, (CSig.Inr next_stateid, content)) ->
             if String.trim content <> "" then 
                 printf "finished current proof, move to state id: %d, message content: %s\n" next_stateid content;
             Runtime.new_stateid := next_stateid;
-            (* Doc_model.add_to_doc (next_stateid, cmd); *)
             Doc_model.finish_add stateid;
             flush stdout
         | Fail (stateid, _, xml_content) -> 
             printf "error add in state id %d, message content: " stateid;
             print_xml stdout xml_content;
             print_endline "";
-            (*Doc_model.clear_cache ();*)
             flush stdout
     end;
-    (*Thread.delay 0.001;*)
-    (* if !Runtime.current_cmd_type <> Require then  *)
-        request_goals ();
+    request_goals ();
     flush coq_channels.cout
 
 let request_edit_at stateid = 
@@ -163,9 +153,6 @@ let response_edit_at msg stateid =
             printf "focusedStateId: %d, focusedQedStateId: %d, oldFocusedStateId: %d\n" focusedStateId focusedQedStateId oldFocusedStateId;
             flush stdout;
             on_edit_at stateid
-            (* Doc_model.move_focus_to stateid;
-            Runtime.new_stateid := stateid;
-            History.undo_upto stateid *)
         | Fail (errorFreeStateId, loc, xml_content) ->
             printf "errorFreeStateId: %d, message content: " errorFreeStateId;
             print_xml stdout xml_content;
@@ -314,12 +301,6 @@ let response_annotate msg =
 
 let interpret_feedback xml_fb = 
     let fb = Xmlprotocol.to_feedback xml_fb in
-    (* begin
-        match fb.id with
-        | Edit editid -> printf "editid: %d, " editid
-        | State stateid -> printf "stateid: %d, " stateid
-    end; *)
-    (* printf ""; *)
     begin
         match fb.contents, fb.id with 
         | Processed, State sid -> ()(*printf "Processed stateid %d\n" sid*); Doc_model.coqtop_processed sid
@@ -352,16 +333,12 @@ let interpret_feedback xml_fb =
         | Message (levl, loc, xml_content), Edit eid -> ()(*printf "Message %s, editid %d" (str_feedback_level levl) eid; print_xml stdout xml_content*)
     end;
     (* printf "\n"; *)
-    (*printf "route: %d\n" fb.route;*)
     flush stdout
 
 
 
 let handle_input input_str = 
-    (*output_string stdout (input_str^"\n");*)
     Runtime.current_cmd_type := get_cmd_type input_str;
-    (*print_endline ("current_cmd_type: "^(Cmd.str_cmd_type !Cmd.current_cmd_type));*)
-    (*request_mode := Request_init;*)
     Flags.running_coqv := false;
     request_add (input_str) (-1) !Runtime.new_stateid true;
     log_coqtop true input_str;
@@ -378,8 +355,6 @@ let handle_answer received_str =
     let fb_str = received_str in
     (* print_endline fb_str; *)
     log_coqtop false fb_str;
-    (*printf "got feedback message length: %d\n" (String.length fb_str);
-    printf "received: %s\n\n" fb_str;*)
     let handle str = 
         try
         let xparser = Xml_parser.make (Xml_parser.SString str) in
@@ -435,10 +410,8 @@ let interpret_cmd cmd_str_list =
         match cmd_str_list with
         | [] -> ()
         | cmd :: options -> 
-        (*printf "Interpreting command: %s\n" cmd;*)
         begin
             match cmd with
-            (*| "init" -> request_init None; running_coqv := false*)
             | "status" -> print_endline (Status.str_status ())
             | "history" -> print_endline (History.str_history ())
             | "proof" -> 
@@ -454,8 +427,9 @@ let interpret_cmd cmd_str_list =
                 let new_stateid = int_of_string (List.hd options) in
                 request_edit_at new_stateid
             | "quit" -> 
-                request_quit ();
-                exit 0
+                Flags.running_coqv := false;
+                request_quit ()
+                (* exit 0 *)
             | "export" ->
                 let eout = open_out (List.hd options) in
                 let cmd_list = List.rev !Doc_model.doc in

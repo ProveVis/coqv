@@ -40,7 +40,8 @@ let worker cin =
         end
         (*;
         print_endline "received a feedback"*)
-    done
+    done;
+    print_endline "worker quit"
 
 let rec loop args = 
     let master2slave_in, master2slave_out = Unix.pipe () 
@@ -88,28 +89,31 @@ let rec loop args =
                 (* print_endline "we are running coqtop now"; *)
                 Mutex.lock read_write_mutex;
                 Condition.wait read_write_condition read_write_mutex;
-                Mutex.unlock read_write_mutex;
-                Thread.delay 0.01 (*waiting for the last input from coqtop to complete*)
+                Mutex.unlock read_write_mutex
+                (* Thread.delay 0.01 waiting for the last input from coqtop to complete *)
             end; 
-            print_string "coqv> ";
-            let input_str = String.trim (read_line ()) in
-            if (String.length input_str > 0) then begin
-                if String.sub input_str 0 1 = ":" then begin
-                    let cmd = (String.sub input_str 1 (String.length input_str - 1)) in
-                    let cmd_str_list = Str.split (Str.regexp "[ \t]+") (String.trim cmd) in
-                    interpret_cmd cmd_str_list
-                end else begin
-                    (* running_coqv := false; *)
-                    let str_buffer = ref input_str in
-                    while (String.sub !str_buffer (String.length !str_buffer - 1) 1 <> ".") do
-                        print_string "    > ";
-                        str_buffer := !str_buffer ^ (read_line ())
-                    done;
-                    handle_input !str_buffer
-                end
-            end else 
-                Flags.running_coqv := true
-        done
+            if !running then begin
+                print_string "coqv> ";
+                let input_str = String.trim (read_line ()) in
+                if (String.length input_str > 0) then begin
+                    if String.sub input_str 0 1 = ":" then begin
+                        let cmd = (String.sub input_str 1 (String.length input_str - 1)) in
+                        let cmd_str_list = Str.split (Str.regexp "[ \t]+") (String.trim cmd) in
+                        interpret_cmd cmd_str_list
+                    end else begin
+                        (* running_coqv := false; *)
+                        let str_buffer = ref input_str in
+                        while (String.sub !str_buffer (String.length !str_buffer - 1) 1 <> ".") do
+                            print_string "    > ";
+                            str_buffer := !str_buffer ^ (read_line ())
+                        done;
+                        handle_input !str_buffer
+                    end
+                end else 
+                    Flags.running_coqv := true
+            end
+        done;
+        print_endline "main thread quit"
     end
 
 let _ = 
