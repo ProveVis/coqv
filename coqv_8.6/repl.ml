@@ -14,7 +14,7 @@ let worker cin =
     while !Runtime.running do
         (* print_endline "wait for coqtop"; *)
         let len = input cin buffer 0 !Flags.xml_bufsize in
-        (* print_endline "coqtop responsed"; *)
+        (* print_endline ("coqtop responsed with length "^(string_of_int len)); *)
         if len = 0 then
             running := false
         else begin
@@ -25,7 +25,19 @@ let worker cin =
                 handle_answer output_str;
             flush stdout
         end;
-        Condition.signal read_write_condition
+        (* print_endline ("there are "^(string_of_int (List.length !batch_commands))^" commands wait to send to coqtop"); *)
+        if Doc_model.coqtop_is_processed () && !Doc_model.goal_responsed then begin
+            (* print_endline ("coqtop processed "^(string_of_int !Doc_model.processed_stateid)); *)
+            if !Flags.batch_mode = false || (!batch_commands = []) then begin
+                Flags.batch_mode := false;
+                Flags.running_coqv := true;
+                Condition.signal read_write_condition
+            end else begin
+                let bch, bct = List.hd !batch_commands, List.tl !batch_commands in
+                handle_input bch;
+                batch_commands := bct
+            end
+        end
         (*;
         print_endline "received a feedback"*)
     done
@@ -50,7 +62,7 @@ let rec loop args =
         (*In_thread.run (fun () -> worker cin);*)
         
         (*input header information*)
-        let running_coqv = ref false in
+        (* let running_coqv = ref false in *)
         begin
             Interaction.request_coq_info cout;
             Thread.delay 0.1;
@@ -67,26 +79,27 @@ let rec loop args =
                     flush stdout
                 end
             | _ -> printf "parsing message fails");
-            running_coqv := true
+            Flags.running_coqv := true
         end;
         ignore(Thread.create worker cin);
         request_init None;
         while !running do
-            if not !running_coqv then begin
+            if not !Flags.running_coqv then begin
+                (* print_endline "we are running coqtop now"; *)
                 Mutex.lock read_write_mutex;
                 Condition.wait read_write_condition read_write_mutex;
                 Mutex.unlock read_write_mutex;
                 Thread.delay 0.01 (*waiting for the last input from coqtop to complete*)
-            end;
+            end; 
             print_string "coqv> ";
-            let input_str = read_line () in
+            let input_str = String.trim (read_line ()) in
             if (String.length input_str > 0) then begin
                 if String.sub input_str 0 1 = ":" then begin
                     let cmd = (String.sub input_str 1 (String.length input_str - 1)) in
                     let cmd_str_list = Str.split (Str.regexp "[ \t]+") (String.trim cmd) in
-                    running_coqv := interpret_cmd cmd_str_list
+                    interpret_cmd cmd_str_list
                 end else begin
-                    running_coqv := false;
+                    (* running_coqv := false; *)
                     let str_buffer = ref input_str in
                     while (String.sub !str_buffer (String.length !str_buffer - 1) 1 <> ".") do
                         print_string "    > ";
@@ -95,7 +108,7 @@ let rec loop args =
                     handle_input !str_buffer
                 end
             end else 
-                running_coqv := true
+                Flags.running_coqv := true
         done
     end
 
@@ -115,4 +128,4 @@ let _ =
         ]
         (fun s -> print_endline ("unknown option"^s))
         "Usage: coqv [-ip <ip_address>]";
-    loop ["-xml";"-ideslave"; "-main-channel"; "stdfds"]
+    loop ["-xml";"-ideslave"; "-main-channel"; "stdfds"; "-async-proofs"; "off"]

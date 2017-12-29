@@ -88,4 +88,5 @@ type cmd_type =
     | Qed
     | Focus of int
     (* | Unfocus *)
+    | Require
     | Other

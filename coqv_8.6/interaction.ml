@@ -14,6 +14,8 @@ open Callbacks
 open Coqv_utils
 (*open Parser*)
 
+let batch_commands = ref []
+
 type request_mode = 
       Request_add of string    
     | Request_edit_at of Stateid.t
@@ -84,6 +86,7 @@ let request_goals () =
 
 let response_goals msg =
     (*print_endline "received response from goals.................";*)
+    begin
     match msg with
     | Good None -> 
         (* print_endline "**************no more goals****************"; *)
@@ -97,8 +100,11 @@ let response_goals msg =
     | Good (Some goals) -> on_receive_goals !Runtime.current_cmd_type goals
     | Fail _ -> 
         print_endline "fail to get goals"
+    end;
+    Doc_model.goal_responsed := true
 
 let request_add cmd editid stateid verbose = 
+    Doc_model.goal_responsed := false;
     let ecmd = cmd in
     let cout = Runtime.coq_channels.cout in
     request_mode := Request_add cmd;
@@ -134,7 +140,8 @@ let response_add msg cmd =
             flush stdout
     end;
     (*Thread.delay 0.001;*)
-    request_goals ();
+    (* if !Runtime.current_cmd_type <> Require then  *)
+        request_goals ();
     flush coq_channels.cout
 
 let request_edit_at stateid = 
@@ -307,30 +314,44 @@ let response_annotate msg =
 
 let interpret_feedback xml_fb = 
     let fb = Xmlprotocol.to_feedback xml_fb in
-    begin
+    (* begin
         match fb.id with
         | Edit editid -> printf "editid: %d, " editid
         | State stateid -> printf "stateid: %d, " stateid
-    end;
-    printf "";
+    end; *)
+    (* printf ""; *)
     begin
-        match fb.contents with 
-        | Processed -> printf "Processed"
-        | Incomplete -> printf "Incomplete"
-        | Complete -> printf "Complete"
-        | ProcessingIn worker_name -> printf "ProcessingIn worker %s" worker_name
-        | InProgress i -> printf "InProgress %d" i 
-        | WorkerStatus (worker_name, status) -> printf "WorkerStatus: %s --> %s" worker_name status
-        | Goals (loc, str) -> printf "Goals: %s" str 
-        | AddedAxiom -> printf "AddedAxiom"
-        | GlobRef _ -> printf "GlobRef ..."
-        | GlobDef _ -> printf "GlobDef ..."
-        | FileDependency _ -> printf "FileDependency ..."
-        | FileLoaded (module_name, vofile_name) -> printf "FileLoaded: %s from %s" module_name vofile_name
-        | Custom _ -> printf "Custom ..."
-        | Message (levl, loc, xml_content) -> printf "Message %s" (str_feedback_level levl); print_xml stdout xml_content
+        match fb.contents, fb.id with 
+        | Processed, State sid -> ()(*printf "Processed stateid %d\n" sid*); Doc_model.coqtop_processed sid
+        | Processed, Edit eid -> ()(*printf "Processed editid %d\n" eid*)
+        | Incomplete, State sid -> ()(*printf "Incomplete stateid %d" sid*)
+        | Incomplete, Edit eid -> ()(*printf "Incomplete editid %d" eid*)
+        | Complete, State sid -> ()(*printf "Complete stateid %d" sid*)
+        | Complete, Edit eid -> ()(*printf "Complete editid %d" eid*)
+        | ProcessingIn worker_name, State sid -> ()(*printf "ProcessingIn worker %s, stateid %d\n" worker_name sid*); Doc_model.coqtop_processing sid
+        | ProcessingIn worker_name, Edit eid -> ()(*printf "ProcessingIn worker %s, editid %d\n" worker_name eid*)
+        | InProgress i, State sid -> ()(*printf "InProgress %d, stateid %d" i sid*)
+        | InProgress i, Edit eid -> ()(*printf "InProgress %d, editid %d" i eid *)
+        | WorkerStatus (worker_name, status), State sid -> ()(*printf "WorkerStatus: %s --> %s, stateid %d" worker_name status sid*)
+        | WorkerStatus (worker_name, status), Edit eid -> ()(*printf "WorkerStatus: %s --> %s, editid %d" worker_name status eid*)
+        | Goals (loc, str), State sid -> ()(*printf "Goals: %s, stateid %d" str sid*)
+        | Goals (loc, str), Edit eid -> ()(*printf "Goals: %s, editid %d" str eid *)
+        | AddedAxiom, State sid -> ()(*printf "AddedAxiom stateid %d" sid*)
+        | AddedAxiom, Edit eid -> ()(*printf "AddedAxiom editid %d" eid*)
+        | GlobRef _, State sid -> ()(*printf "GlobRef ... stateid %d" sid*)
+        | GlobRef _, Edit eid -> ()(*printf "GlobRef ... editid %d" eid*)
+        | GlobDef _, State sid -> ()(*printf "GlobDef ... stateid %d" sid*)
+        | GlobDef _, Edit eid -> ()(*printf "GlobDef ... editid %d" eid*)
+        | FileDependency _, State sid -> ()(*printf "FileDependency ... stateid %d" sid*)
+        | FileDependency _, Edit eid -> ()(*printf "FileDependency ... editid %d" eid*)
+        | FileLoaded (module_name, vofile_name), State sid -> ()(*printf "FileLoaded: %s from %s, stateid %d" module_name vofile_name sid*)
+        | FileLoaded (module_name, vofile_name), Edit eid -> ()(*printf "FileLoaded: %s from %s, editid %d" module_name vofile_name eid*)
+        | Custom _, State sid -> ()(*printf "Custom ... stateid %d" sid*)
+        | Custom _, Edit eid -> ()(*printf "Custom ... editid %d" eid*)
+        | Message (levl, loc, xml_content), State sid -> ()(*printf "Message %s, stateid %d" (str_feedback_level levl) sid; print_xml stdout xml_content*)
+        | Message (levl, loc, xml_content), Edit eid -> ()(*printf "Message %s, editid %d" (str_feedback_level levl) eid; print_xml stdout xml_content*)
     end;
-    printf "\n";
+    (* printf "\n"; *)
     (*printf "route: %d\n" fb.route;*)
     flush stdout
 
@@ -341,6 +362,7 @@ let handle_input input_str =
     Runtime.current_cmd_type := get_cmd_type input_str;
     (*print_endline ("current_cmd_type: "^(Cmd.str_cmd_type !Cmd.current_cmd_type));*)
     (*request_mode := Request_init;*)
+    Flags.running_coqv := false;
     request_add (input_str) (-1) !Runtime.new_stateid true;
     log_coqtop true input_str;
     flush stdout
@@ -371,7 +393,7 @@ let handle_answer received_str =
             other_xml_str str "</message>"            
         | None -> 
             if Xmlprotocol.is_feedback xml_str then begin
-                (* interpret_feedback xml_str; *)
+                interpret_feedback xml_str;
                 other_xml_str str "</feedback>"    
             end else begin
                 begin
@@ -409,7 +431,6 @@ let handle_answer received_str =
     
 
 let interpret_cmd cmd_str_list = 
-    let running_coqv = ref true in
     begin
         match cmd_str_list with
         | [] -> ()
@@ -442,6 +463,7 @@ let interpret_cmd cmd_str_list =
                 flush eout;
                 close_out eout
             | "import" ->
+                Flags.batch_mode := true; (*we are in batch mode now*)
                 let inpt = open_in (List.hd options) in
                 let cmd_strs = ref [] in
                 let lineno = ref 1 in
@@ -461,9 +483,15 @@ let interpret_cmd cmd_str_list =
                         done
                     with
                         End_of_file ->
-                            if (chars_to_string !inpt_buffer = "") then begin
-                                let current_line = ref 1 in
-                                List.iter (fun cmd_str -> handle_input cmd_str; Thread.delay 1.0; printf "Sent: %s\n" cmd_str; incr current_line) !cmd_strs;
+                            if List.length !cmd_strs = 0 then begin
+                                printf "The content of %s is empty\n" (List.hd options);
+                                flush stdout
+                            end else if (chars_to_string !inpt_buffer = "") then begin
+                                let cmdhd, cmdtl = List.hd !cmd_strs, List.tl !cmd_strs in
+                                batch_commands := cmdtl;
+                                (* printf "number of commands wait to send to coqtop: %d\n" (List.length !batch_commands); *)
+                                handle_input cmdhd;
+                                (* List.iter (fun cmd_str -> handle_input cmd_str; Thread.delay 1.0; printf "Sent: %s\n" cmd_str; incr current_line) !cmd_strs; *)
                                 printf "Successfully read from file %s\n" (List.hd options);
                                 flush stdout
                             end else begin
@@ -478,5 +506,4 @@ let interpret_cmd cmd_str_list =
                 end
             | _ -> print_endline "command not interpreted."
         end
-    end;
-    !running_coqv
+    end

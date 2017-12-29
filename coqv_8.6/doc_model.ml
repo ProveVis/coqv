@@ -8,6 +8,19 @@ let cache : (cmd_commited option) ref = ref None
 
 let current_stateid = ref 0
 
+let processing_stateid = ref 0
+let processed_stateid = ref 0
+
+let coqtop_processing sid = 
+    if sid > !processing_stateid then
+        processing_stateid := sid
+let coqtop_processed sid = 
+    if sid > !processed_stateid then
+        processed_stateid := sid
+let coqtop_is_processed () = !processed_stateid > 0 && !processed_stateid >= !processing_stateid
+
+let goal_responsed = ref true
+
 let add_to_doc cc = doc := cc :: !doc
 
 let doc_length () = List.length !doc 

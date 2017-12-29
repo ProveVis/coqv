@@ -118,6 +118,7 @@ let on_receive_goals cmd_type goals =
             add_new_goals true goals
         | Other -> 
             add_new_goals false goals
+        | Require -> ()
     end
             
 

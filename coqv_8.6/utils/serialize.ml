@@ -65,7 +65,9 @@ let of_option (f : 'a -> xml) : 'a option -> xml = function
 let to_option (f : xml -> 'a) : xml -> 'a option = function
   | Element ("option", ["val", "none"], []) -> None
   | Element ("option", ["val", "some"], [x]) -> Some (f x)
-  | x -> raise (Marshal_error("option",x))
+  | x -> 
+    print_endline ("not a option: "^(Xml_printer.to_string_fmt x));
+    raise (Marshal_error("option",x))
 
 let of_string (s : string) : xml = Element ("string", [], [PCData s])
 let to_string : xml -> string = function
@@ -84,7 +86,9 @@ let of_pair (f : 'a -> xml) (g : 'b -> xml) (x : 'a * 'b) : xml =
   Element ("pair", [], [f (fst x); g (snd x)])
 let to_pair (f : xml -> 'a) (g : xml -> 'b) : xml -> 'a * 'b = function
   | Element ("pair", [], [x; y]) -> (f x, g y)
-  | x -> raise (Marshal_error("pair",x))
+  | x -> 
+    print_endline ("not a pair: "^(Xml_printer.to_string_fmt x));
+    raise (Marshal_error("pair",x))
 
 let of_union (f : 'a -> xml) (g : 'b -> xml) : ('a,'b) CSig.union -> xml = function
   | CSig.Inl x -> Element ("union", ["val","in_l"], [f x])

@@ -58,6 +58,7 @@ let get_cmd_type cmd =
     | "Fact" :: tl_split -> Proof (List.hd tl_split, Fact)
     | "Goal" :: tl_split -> Proof ("Unnamed_thm", Goal)
     | "Qed" :: tl_split -> Qed
+    | "Require" :: tl_split -> Require
     | _ -> Other
 
 let str_cmd_type ct = 
@@ -67,6 +68,7 @@ let str_cmd_type ct =
     | Proof (thm_name, pk) -> "Proof "^(str_proof_kind pk)^" "^thm_name
     | Qed -> "Qed"
     | Focus _ -> "Focus"
+    | Require -> "Require"
     | Other -> "Other"
 
 let rec richpp_to_string richpp = 

@@ -8,7 +8,6 @@ xml:
 	ocamlc -c store.ml
 	ocamlc -thread -c threads.cma unix.cma exninfo.ml
 	ocamlc -c loc.ml
-	ocamlc -c serialize.ml
 	ocamlc -c stateid.ml
 	ocamlc -c util.ml
 	ocamlc -c feedback.ml
@@ -21,11 +20,12 @@ xml:
 	ocamlc -c ppstyle.ml
 	ocamlc -c cErrors.ml
 	ocamlc -c richpp.ml
+	ocamlc -c serialize.ml
 	ocamlc -c xmlprotocol.ml
 	ocamlc -thread -a -o xml.cma threads.cma xml_datatype.mli xml_lexer.cmo xml_parser.cmo xml_printer.cmo \
-	 cSig.mli store.cmo  exninfo.cmo loc.cmo serialize.cmo stateid.cmo \
+	 cSig.mli store.cmo  exninfo.cmo loc.cmo stateid.cmo \
 	 util.cmo feedback.cmo interface.mli dyn.cmo pp_control.cmo backtrace.cmo pp.cmo terminal.cmo \
-	 ppstyle.cmo cErrors.cmo richpp.cmo xmlprotocol.cmo
+	 ppstyle.cmo cErrors.cmo richpp.cmo serialize.cmo xmlprotocol.cmo
 
 test:
 	ocamlc -thread -o test threads.cma unix.cma xml.cma str.cma test_xml.ml
