@@ -13,7 +13,6 @@ Executable coqv
   CompiledObject: best
   Install: false
   BuildDepends: xmlutils, unix, threads, yojson, str
-#  FindlibDirectory: utils
 
 
 Library xmlutils
@@ -21,7 +20,6 @@ Library xmlutils
   Path:       utils
   BuildTools: ocamlbuild
   FindlibName: xmlutils
-#  FindlibParent: utils
   CompiledObject: best
   Modules: Xml_datatype, Xml_lexer, Xml_parser,
            Xml_printer, CSig, Store, Exninfo,
