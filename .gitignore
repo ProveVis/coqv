@@ -10,4 +10,5 @@ comm
 log
 *.log
 /coqv_8.6/.vscode/
-.DS_Store
+/coqv_8.*/.DS_Store
+_build/

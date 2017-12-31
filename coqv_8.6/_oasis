@@ -1,0 +1,33 @@
+OASISFormat: 0.4
+Name:        coqv
+Version:     0.1
+Synopsis:    This tool is intended to be a middleware for the  communications
+Authors:     Jian LIU <liujian@ios.ac.cn>
+License:     LGPL-3.0 with OCaml linking exception
+Plugins:     DevFiles (0.4)
+PostBuildCommand: mv repl.native coqv
+Executable coqv
+  Path:       ./
+  BuildTools: ocamlbuild
+  MainIs:     repl.ml
+  CompiledObject: best
+  Install: false
+  BuildDepends: xmlutils, unix, threads, yojson, str
+#  FindlibDirectory: utils
+
+
+Library xmlutils
+  Pack: true
+  Path:       utils
+  BuildTools: ocamlbuild
+  FindlibName: xmlutils
+#  FindlibParent: utils
+  CompiledObject: best
+  Modules: Xml_datatype, Xml_lexer, Xml_parser,
+           Xml_printer, CSig, Store, Exninfo,
+           Loc, Stateid, Util, Feedback,
+           Interface, Dyn, Pp_control,
+           Backtrace, Pp, Terminal, Ppstyle,
+           CErrors, Richpp, Serialize,
+           Xmlprotocol
+  BuildDepends: unix, threads, yojson, str

@@ -1,0 +1,9 @@
+_build/
+myocamlbuild.ml
+setup.ml
+setup.data
+Makefile_old
+.vscode/
+*.mllib
+*.mldylib
+_tags
