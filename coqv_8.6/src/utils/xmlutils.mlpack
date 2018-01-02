@@ -1,0 +1,25 @@
+# OASIS_START
+# DO NOT EDIT (digest: c5b731e8a05a5117cec97de973ecd9b5)
+Xml_datatype
+Xml_lexer
+Xml_parser
+Xml_printer
+CSig
+Store
+Exninfo
+Loc
+Stateid
+Util
+Feedback
+Interface
+Dyn
+Pp_control
+Backtrace
+Pp
+Terminal
+Ppstyle
+CErrors
+Richpp
+Serialize
+Xmlprotocol
+# OASIS_STOP

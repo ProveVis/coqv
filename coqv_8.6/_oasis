@@ -17,7 +17,7 @@ Executable coqv
 
 Library xmlutils
   Pack: true
-  Path:       utils
+  Path:       src/utils
   BuildTools: ocamlbuild
   FindlibName: xmlutils
   CompiledObject: best
