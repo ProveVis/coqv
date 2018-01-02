@@ -18,6 +18,11 @@ let str_status () =
         str_history
         str_session
 
+let rec str_tactics ttcs = 
+    match ttcs with
+    | [] -> ""
+    | ttc :: ttcs' -> ttc^" "^(str_tactics ttcs')
+
 let str_proof_tree sn_path = 
     let str_sp_list = String.split_on_char '.' (String.trim sn_path) in
     let sno = Proof_model.find_session str_sp_list in
@@ -38,7 +43,7 @@ let str_proof_tree sn_path =
             str_buf := (!str_buf) ^" ("^(str_node_state node.state)^")\n"^ (Types.str_label node.label);
             try 
                 let cmd, clist = Proof_model.children current_node proof_tree in
-                str_buf := !str_buf ^ "(" ^ cmd ^ ")\t[";
+                str_buf := !str_buf ^ "(" ^ (str_tactics cmd) ^ ")\t[";
                 List.iter (fun c -> str_buf := !str_buf ^ c ^ " "; Queue.push c node_queue) clist;
                 str_buf := !str_buf ^ "]\n\n";
             with Not_found -> begin

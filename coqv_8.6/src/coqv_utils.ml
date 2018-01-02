@@ -2,6 +2,8 @@ open Printf
 open Interface
 open Types
 
+
+
 let escaped_str str = 
     let buffer = Bytes.create 1024 in
     let length = ref 0 in
@@ -39,6 +41,15 @@ let caught_str str =
     Str.global_replace (Str.regexp " , ") ", " |>
     Str.global_replace (Str.regexp " : ") ": "
 
+type cmd_type = 
+    Module of string
+    | End of string
+    | Proof of string * proof_kind
+    | Qed
+    | Focus of int
+    | Require
+    | Edit_label
+    | Other
 
 let get_cmd_type cmd =
     let tcmd = String.trim cmd in
@@ -59,6 +70,13 @@ let get_cmd_type cmd =
     | "Goal" :: tl_split -> Proof ("Unnamed_thm", Goal)
     | "Qed" :: tl_split -> Qed
     | "Require" :: tl_split -> Require
+    | "move" :: tl_split -> Edit_label
+    | "rename" :: tl_split -> Edit_label
+    | "set" :: tl_split -> Edit_label
+    | "remember" :: tl_split -> Edit_label
+    | "pose" :: tl_split -> Edit_label
+    | "clear" :: tl_split -> Edit_label
+    | "clearbody" :: tl_split -> Edit_label
     | _ -> Other
 
 let str_cmd_type ct = 
@@ -69,6 +87,7 @@ let str_cmd_type ct =
     | Qed -> "Qed"
     | Focus _ -> "Focus"
     | Require -> "Require"
+    | Edit_label -> "Edit_label"
     | Other -> "Other"
 
 let rec richpp_to_string richpp = 

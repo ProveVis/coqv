@@ -38,8 +38,6 @@ let worker cin =
                 batch_commands := bct
             end
         end
-        (*;
-        print_endline "received a feedback"*)
     done;
     print_endline "worker quit"
 
@@ -59,11 +57,6 @@ let rec loop args =
         Unix.close slave2master_out;
         Runtime.coq_channels.cin <- cin;
         Runtime.coq_channels.cout <- cout;
-        (*starting reading from repl*)
-        (*In_thread.run (fun () -> worker cin);*)
-        
-        (*input header information*)
-        (* let running_coqv = ref false in *)
         begin
             Interaction.request_coq_info cout;
             Thread.delay 0.1;
@@ -86,11 +79,9 @@ let rec loop args =
         request_init None;
         while !running do
             if not !Flags.running_coqv then begin
-                (* print_endline "we are running coqtop now"; *)
                 Mutex.lock read_write_mutex;
                 Condition.wait read_write_condition read_write_mutex;
                 Mutex.unlock read_write_mutex
-                (* Thread.delay 0.01 waiting for the last input from coqtop to complete *)
             end; 
             if !running then begin
                 print_string "coqv> ";
@@ -101,7 +92,6 @@ let rec loop args =
                         let cmd_str_list = Str.split (Str.regexp "[ \t]+") (String.trim cmd) in
                         interpret_cmd cmd_str_list
                     end else begin
-                        (* running_coqv := false; *)
                         let str_buffer = ref input_str in
                         while (String.sub !str_buffer (String.length !str_buffer - 1) 1 <> ".") do
                             print_string "    > ";

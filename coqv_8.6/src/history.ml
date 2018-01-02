@@ -5,6 +5,7 @@ open Runtime
 type step = 
       Change_state of string * node_state
     | Add_node of string
+    (* | Change_label of string *)
     | Dummy
 
 type history = (Stateid.t * (step list)) list

@@ -32,9 +32,12 @@ let on_change_node_state (node:node) state =
         change_node_state node.id state
     end
 
+let on_change_node_label (node:node) new_label tactic = 
+    set_new_label node.id new_label tactic
+
 let on_add_node node_from node_to state = 
     let label = (snd (List.hd !Doc_model.doc)) in
-    add_edge node_from node_to label;
+    add_edge node_from node_to [label];
     History.record_step !Runtime.new_stateid (Add_node node_to.id);
     node_to.state <- state;
     begin
@@ -65,7 +68,7 @@ let add_new_goals focus_mode goals =
         if List.length new_nodes = 0 then begin
             print_endline "No more goals.";
             on_change_node_state cnode Proved;
-            add_rule_label cnode.id (snd (List.hd !Doc_model.doc))
+            add_tactic cnode.id (snd (List.hd !Doc_model.doc))
         end else begin
             if not focus_mode then begin
                 let has_new = List.fold_left (fun b n -> 
@@ -76,7 +79,7 @@ let add_new_goals focus_mode goals =
                     ) false new_nodes in
                 if not has_new then begin
                     on_change_node_state cnode Proved;
-                    add_rule_label cnode.id (snd (List.hd !Doc_model.doc))
+                    add_tactic cnode.id (snd (List.hd !Doc_model.doc))
                 end
             end;
             List.iter (fun n ->
@@ -119,6 +122,17 @@ let on_receive_goals cmd_type goals =
         | Other -> 
             add_new_goals false goals
         | Require -> ()
+        | Edit_label -> begin
+                let chosen_node = select_chosen_node () in
+                match chosen_node with
+                | None -> print_endline "error finding the current chosen node when editing the label"
+                | Some cnode -> 
+                    assert (List.length goals.fg_goals > 0);
+                    let new_goal = List.hd (goals.fg_goals) in
+                    let new_label = goal_to_label new_goal in
+                    print_endline ("new label for "^(cnode.id)^": \n"^(str_label new_label));
+                    on_change_node_label cnode new_label (snd (List.hd !Doc_model.doc))
+            end
     end
             
 

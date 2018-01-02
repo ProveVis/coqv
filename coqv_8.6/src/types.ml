@@ -44,17 +44,17 @@ let str_label label =
 
 type node = {
     id: string;
-    label: label;
+    mutable label: label;
     mutable state: node_state;
     mutable parent: node;
     mutable stateid: int;
 }
 
-type tatic = string
+type tactic = string list
 
-type step = tatic * node * (node list)
+type step = tactic * node * (node list)
 
-type children = tatic * (string list)
+type children = tactic * (string list)
 
 let str_node n = 
     "Node "^n.id^"("^(str_node_state n.state)^"): \n"^(str_label n.label)^"\n"
@@ -80,13 +80,3 @@ type modul = {
     modul_tbl: (string, modul) Hashtbl.t;
 }
 (********************************************************************)
-
-type cmd_type = 
-      Module of string
-    | End of string
-    | Proof of string * proof_kind
-    | Qed
-    | Focus of int
-    (* | Unfocus *)
-    | Require
-    | Other

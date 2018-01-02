@@ -1,7 +1,7 @@
 OASISFormat: 0.4
 Name:        coqv
 Version:     0.1
-Synopsis:    This tool is intended to be a middleware for the  communications
+Synopsis:    This tool is intended to be a middleware for the communications of the proof visualization tool VMDV and the theorem prover coq.
 Authors:     Jian LIU <liujian@ios.ac.cn>
 License:     LGPL-3.0 with OCaml linking exception
 Plugins:     DevFiles (0.4)

@@ -2,6 +2,7 @@ open Types
 open Printf
 open Interface
 open Communicate
+open Coqv_utils
 
 let coqtop_info : coq_info ref = ref {
     coqtop_version = "";

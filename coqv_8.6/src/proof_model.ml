@@ -136,6 +136,16 @@ let remove_node nid =
         Hashtbl.remove proof_tree.edges node.id
     done
 
+let set_new_label nid new_label tactic = 
+    let proof_tree = current_proof_tree () in
+    let node = Hashtbl.find proof_tree.nodes nid in
+    node.label <- new_label;
+    try
+        let tactics, children_ids = Hashtbl.find proof_tree.edges nid in
+        Hashtbl.replace proof_tree.edges nid (tactics@[tactic], children_ids)
+    with Not_found ->
+        Hashtbl.add proof_tree.edges nid ([tactic], [])
+
 let print_label node = 
     printf "%s\n" (str_label node.label);
     flush stdout
@@ -162,10 +172,13 @@ let add_edge from_node to_node tatic =
         flush stdout
     end
 
-let add_rule_label nodeid tactic = 
+let add_tactic nodeid tactic = 
     let proof_tree = current_proof_tree () in
     if not (Hashtbl.mem proof_tree.edges nodeid) then
-        Hashtbl.add proof_tree.edges nodeid (tactic, [])
+        Hashtbl.add proof_tree.edges nodeid ([tactic], [])
+    else 
+        let tactics, children_ids = Hashtbl.find proof_tree.edges nodeid in
+        Hashtbl.add proof_tree.edges nodeid (tactics@[tactic], children_ids)
 
 let new_session sname skind sstate proof_tree = 
     {

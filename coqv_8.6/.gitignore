@@ -7,4 +7,7 @@ Makefile_old
 *.mllib
 *.mldylib
 _tags
-utils/*.mlpack
+src/utils/xmlutils.mlpack
+*.bak
+configure
+Makefile
