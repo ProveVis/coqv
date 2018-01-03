@@ -4,11 +4,10 @@ parser.mli
 xml_lexer.ml
 coqv
 coqv.exe
-repl
-comm
 *.eventlog
 log
-*.log
-/coqv_8.6/.vscode/
-/coqv_8.*/.DS_Store
+*/*.log
+*/.vscode/
 _build/
+*/.DS_Store
+.DS_Store
