@@ -94,8 +94,10 @@ let response_goals msg =
             | _ -> ()
         end
     | Good (Some goals) -> on_receive_goals !Runtime.current_cmd_type goals
-    | Fail _ -> 
-        print_endline "fail to get goals"
+    | Fail (id,loc, msg) -> 
+        print_endline "fail to get goals";
+        printf "Fail at stateid %d: %s\n" id (richpp_to_string msg);
+        flush stdout
     end;
     Doc_model.goal_responsed := true
 
@@ -329,7 +331,10 @@ let interpret_feedback xml_fb =
         | FileLoaded (module_name, vofile_name), Edit eid -> ()(*printf "FileLoaded: %s from %s, editid %d" module_name vofile_name eid*)
         | Custom _, State sid -> ()(*printf "Custom ... stateid %d" sid*)
         | Custom _, Edit eid -> ()(*printf "Custom ... editid %d" eid*)
-        | Message (levl, loc, xml_content), State sid -> ()(*printf "Message %s, stateid %d" (str_feedback_level levl) sid; print_xml stdout xml_content*)
+        | Message (levl, loc, xml_content), State sid -> 
+            if levl = Feedback.Error then
+                Doc_model.coqtop_processed sid;
+            ()(*printf "Message %s, stateid %d" (str_feedback_level levl) sid; print_xml stdout xml_content*)
         | Message (levl, loc, xml_content), Edit eid -> ()(*printf "Message %s, editid %d" (str_feedback_level levl) eid; print_xml stdout xml_content*)
     end;
     (* printf "\n"; *)

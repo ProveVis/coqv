@@ -27,7 +27,6 @@ let ignored_re () = Str.regexp !prompt
 let new_stateid = ref 0
 let running = ref true
 
-let current_cmd_type = ref Other
 
 let vagent:(visualize_agent option) ref = ref None
 

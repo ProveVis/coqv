@@ -3,7 +3,6 @@ open Interface
 open Types
 
 
-
 let escaped_str str = 
     let buffer = Bytes.create 1024 in
     let length = ref 0 in
@@ -50,6 +49,8 @@ type cmd_type =
     | Require
     | Edit_label
     | Other
+
+let current_cmd_type = ref Other
 
 let get_cmd_type cmd =
     let tcmd = String.trim cmd in

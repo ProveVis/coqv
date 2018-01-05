@@ -1,4 +1,66 @@
 open Printf
+open Coqv_utils
+
+type node_status =
+    | Added
+    | Committed
+
+let str_node_status ns = 
+    match ns with
+    | Added -> "Added"
+    | Committed -> "Committed"
+
+type doc_committed = {
+    stateid: Stateid.t;
+    mutable status: node_status;
+    mutable last: (string * doc_committed) option;
+}
+
+let rec str_doc_committed docc = 
+    let tmp_str = ref "" in
+    tmp_str := tmp_str^"stateid: "^(Stateid.to_string docc.stateid)^"; ";
+    tmp_str := tmp_str^"status: "^(str_node_status docc.status)^"; ";
+    begin
+        match docc.last with
+        | None -> ()
+        | Some (command, last_docc) -> tmp_str := tmp_str^"\n\t--"^command^"-->\n"^(str_doc_committed last_docc)
+    end;
+    !tmp_str
+
+
+let current_doc : doc_committed option ref = ref None
+
+let init_doc () = 
+    match !current_doc with
+    | None -> current_doc := {stateid = Stateid.initial; status = Committed; last = None;}
+    | Some docc -> 
+        printf "Error: current doc is not empty, and cannot be initialized\n%s\n" (str_doc_committed docc);
+        flush stdout;
+        exit 1
+
+let add stateid cmd = 
+    match !current_doc with
+    | None -> 
+        print_endline "Error: the current doc cannot be empty";
+        exit 1
+    | Some docc ->
+        current_doc := {
+            stateid = stateid;
+            status = Added;
+            last = Some (cmd, docc);
+        }
+
+let commit () = 
+    let commit_rec docc = 
+        if docc.status = Added then begin
+            docc.status <- Committed;
+            commit_rec (snd docc.last)
+        end in
+    match !current_doc with
+    | None -> ()
+    | Some docc -> commit_rec docc
+
+****Need to be modified from here!****
 
 type cmd_commited = Stateid.t * string
 type doc_model = cmd_commited list
