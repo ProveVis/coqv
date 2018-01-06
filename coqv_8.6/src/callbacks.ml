@@ -19,7 +19,7 @@ let on_new_session (session: session) =
     let node = session.proof_tree.root in
     History.record_step !Runtime.new_stateid (Add_node node.id);
     begin
-        match !Runtime.vagent with
+        match !Communicate.vagent with
         | None -> (*print_endline "no vmdv agent currently"*)()
         | Some vagt -> 
             Communicate.create_session vagt session;
@@ -36,12 +36,12 @@ let on_change_node_label (node:node) new_label tactic =
     set_new_label node.id new_label tactic
 
 let on_add_node node_from node_to state = 
-    let label = (snd (List.hd !Doc_model.doc)) in
+    let label = Doc_model.uncommitted_command () in
     add_edge node_from node_to [label];
     History.record_step !Runtime.new_stateid (Add_node node_to.id);
     node_to.state <- state;
     begin
-        match !Runtime.vagent with
+        match !Communicate.vagent with
         | None -> (*print_endline "no vmdv agent currently"*)()
         | Some vagt ->
             let sid = !Proof_model.current_session_id in
@@ -68,7 +68,7 @@ let add_new_goals focus_mode goals =
         if List.length new_nodes = 0 then begin
             print_endline "No more goals.";
             on_change_node_state cnode Proved;
-            add_tactic cnode.id (snd (List.hd !Doc_model.doc))
+            add_tactic cnode.id (Doc_model.uncommitted_command ())
         end else begin
             if not focus_mode then begin
                 let has_new = List.fold_left (fun b n -> 
@@ -79,7 +79,7 @@ let add_new_goals focus_mode goals =
                     ) false new_nodes in
                 if not has_new then begin
                     on_change_node_state cnode Proved;
-                    add_tactic cnode.id (snd (List.hd !Doc_model.doc))
+                    add_tactic cnode.id (Doc_model.uncommitted_command ())
                 end
             end;
             List.iter (fun n ->
@@ -131,12 +131,15 @@ let on_receive_goals cmd_type goals =
                     let new_goal = List.hd (goals.fg_goals) in
                     let new_label = goal_to_label new_goal in
                     print_endline ("new label for "^(cnode.id)^": \n"^(str_label new_label));
-                    on_change_node_label cnode new_label (snd (List.hd !Doc_model.doc))
+                    on_change_node_label cnode new_label (Doc_model.uncommitted_command ())
             end
     end
             
 
 let on_edit_at stateid = 
-    Doc_model.move_focus_to stateid;
     Runtime.new_stateid := stateid;
-    History.undo_upto stateid
+    Doc_model.reset_process_stateid ();
+    print_endline ("now edit at stateid "^(string_of_int stateid))
+    (* Doc_model.move_focus_to stateid;
+    Runtime.new_stateid := stateid;
+    History.undo_upto stateid *)

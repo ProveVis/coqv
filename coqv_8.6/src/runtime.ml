@@ -1,7 +1,7 @@
 open Types
 open Printf
 open Interface
-open Communicate
+(* open Communicate *)
 open Coqv_utils
 
 let coqtop_info : coq_info ref = ref {
@@ -28,7 +28,6 @@ let new_stateid = ref 0
 let running = ref true
 
 
-let vagent:(visualize_agent option) ref = ref None
 
 (* let current_coqtop_worker = ref "master" *)
 type debug_info = {

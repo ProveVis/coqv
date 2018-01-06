@@ -41,9 +41,12 @@ let undo_upto stateid =
     done
 
 let str_history () = 
-    match !history with
+    match !Doc_model.current_doc with
+    | None -> "No History"
+    | Some docc -> Doc_model.str_doc_built docc
+    (* match !history with
     | [] -> "None"
     | h :: hs ->
         let str_buf = ref ((string_of_int (fst h))^", "^(string_of_int (List.length (snd h)))^", "^(Doc_model.get_cmd (fst h))^"\n") in
         List.iter (fun (sid, steps) -> str_buf := !str_buf^"<--"^(string_of_int sid)^", "^(string_of_int (List.length steps))^", "^(Doc_model.get_cmd sid)^"\n") hs;
-        !str_buf
+        !str_buf *)

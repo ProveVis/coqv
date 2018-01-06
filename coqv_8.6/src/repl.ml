@@ -26,7 +26,7 @@ let worker cin =
             flush stdout
         end;
         (* print_endline ("there are "^(string_of_int (List.length !batch_commands))^" commands wait to send to coqtop"); *)
-        if Doc_model.coqtop_is_processed () && !Doc_model.goal_responsed then begin
+        if Doc_model.is_processed () && !Doc_model.goal_responsed then begin
             (* print_endline ("coqtop processed "^(string_of_int !Doc_model.processed_stateid)); *)
             if !Flags.batch_mode = false || (!batch_commands = []) then begin
                 Flags.batch_mode := false;
@@ -111,15 +111,16 @@ let _ =
         [
             "-ip", Arg.String (fun s -> 
                     try
-                        Runtime.vagent := Some (Communicate.get_visualize_agent s)
+                        Communicate.vagent := Some (Communicate.get_visualize_agent s)
                     with _ -> print_endline ("connect to vmdv in "^s^" failed.")
                 ), "\tIP address of the VMDV.";
-            "-debug", Arg.Bool (fun b -> 
-                    Flags.debug := b;
-                    if b then 
-                        Runtime.logs := Some {coqtop_log = open_out !Flags.xml_log_file; vmdv_log = open_out !Flags.json_log_file}
+            "-debug", Arg.Unit (fun () -> 
+                    Flags.debug := true;
+                    Runtime.logs := Some {
+                        coqtop_log = open_out ("./log/"^(!Flags.xml_log_file)); 
+                        vmdv_log = open_out ("./log/"^(!Flags.json_log_file))}
                 ), "\tUsing debug mode or not."
         ]
         (fun s -> print_endline ("unknown option"^s))
-        "Usage: coqv [-ip <ip_address>]";
+        "Usage: coqv [-ip <ip_address>] [-debug]";
     loop ["-xml";"-ideslave"; "-main-channel"; "stdfds"; "-async-proofs"; "off"]

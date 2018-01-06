@@ -1,5 +1,6 @@
 open Printf
 open Types
+open Runtime
 open Protocol_json
 
 type visualize_agent =
@@ -11,15 +12,20 @@ type visualize_agent =
         sending_mutex: Mutex.t;
         sending_conditional: Condition.t;
     }
+    
+let vagent : (visualize_agent option) ref = ref None
 
-let log_out = if !Flags.json_log_file = "" then None else Some (open_out !Flags.json_log_file)
+(* let log_out = if !Flags.json_log_file = "" then None else Some (open_out ("./log/"^(!Flags.json_log_file))) *)
     
 let log_if_possible str = 
-    match log_out with 
+    match !Runtime.logs with
+    | None -> ()
+    | Some logs -> output_string logs.coqtop_log str; flush logs.coqtop_log
+    (* match log_out with 
     | None -> ()
     | Some out -> 
         output_string out str;
-        flush out
+        flush out *)
 
 let wait_to_send vagent msg = 
     Mutex.lock vagent.sending_mutex;

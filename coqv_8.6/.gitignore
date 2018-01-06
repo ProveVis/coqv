@@ -11,3 +11,4 @@ src/utils/xmlutils.mlpack
 *.bak
 configure
 Makefile
+.DS_Store

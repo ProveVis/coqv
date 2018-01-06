@@ -15,7 +15,7 @@ open Coqv_utils
 let batch_commands = ref []
 
 type request_mode = 
-      Request_add of string    
+      Request_add of (Stateid.t * string)    
     | Request_edit_at of Stateid.t
     | Request_query     
     | Request_goals
@@ -29,13 +29,13 @@ let request_mode = ref Request_about
 (*************************************************************************************)
 (**sending xml characters to coqtop**)
 
-let request_coq_info cout = 
+let rec request_coq_info cout = 
     request_mode := Request_about;
     let about = Xmlprotocol.About () in
     let xml_about = Xmlprotocol.of_call about in
     Xml_printer.print (Xml_printer.TChannel cout) xml_about
 
-let response_coq_info fb_val = 
+and response_coq_info fb_val = 
     (match fb_val with
     | Good fb -> 
             Runtime.coqtop_info := fb;
@@ -44,7 +44,7 @@ let response_coq_info fb_val =
     | _ -> printf "parsing coq info message fails\n");
     flush stdout
 
-let request_init filename = 
+and request_init filename = 
     let cout = Runtime.coq_channels.cout in
     request_mode := Request_init;
     let init = Xmlprotocol.init filename in
@@ -52,13 +52,13 @@ let request_init filename =
     Xml_printer.print (Xml_printer.TChannel cout) xml_init;
     log_coqtop true (Xml_printer.to_string xml_init)
 
-let response_init msg = 
+and response_init msg = 
     match msg with
     | Good stateid -> 
         Runtime.new_stateid := stateid
     | _ -> printf "unknown from response init\n"; flush stdout    
 
-let request_quit () = 
+and request_quit () = 
     let cout = Runtime.coq_channels.cout in
     request_mode := Request_quit;
     let quit = Xmlprotocol.quit () in
@@ -66,7 +66,7 @@ let request_quit () =
     Xml_printer.print (Xml_printer.TChannel cout) xml_quit;
     log_coqtop true (Xml_printer.to_string xml_quit)
 
-let response_quit msg = 
+and response_quit msg = 
     match msg with
     | Good _ -> 
         print_string ("now quit! \n"); 
@@ -74,7 +74,7 @@ let response_quit msg =
         (* exit 0 *)
     | _ -> printf "unknown from response quit\n"; flush stdout  
 
-let request_goals () =
+and request_goals () =
     let cout = Runtime.coq_channels.cout in 
     request_mode := Request_goals;
     let goals = Xmlprotocol.goals () in
@@ -82,50 +82,56 @@ let request_goals () =
     Xml_printer.print (Xml_printer.TChannel cout) xml_goals;
     log_coqtop true (Xml_printer.to_string xml_goals)
 
-let response_goals msg =
+and response_goals msg =
     begin
     match msg with
     | Good None -> 
         begin
-            match !Runtime.current_cmd_type with
+            match !Coqv_utils.current_cmd_type with
             | Qed -> 
                 current_session_id := "";
                 History.record_step !Runtime.new_stateid Dummy
             | _ -> ()
         end
-    | Good (Some goals) -> on_receive_goals !Runtime.current_cmd_type goals
+    | Good (Some goals) -> on_receive_goals !Coqv_utils.current_cmd_type goals
     | Fail (id,loc, msg) -> 
         print_endline "fail to get goals";
         printf "Fail at stateid %d: %s\n" id (richpp_to_string msg);
-        flush stdout
+        flush stdout;
+        request_edit_at (Doc_model.latest_committed_stateid ())
     end;
     Doc_model.goal_responsed := true
 
-let request_add cmd editid stateid verbose = 
+and request_add cmd editid stateid verbose = 
     Doc_model.goal_responsed := false;
     let ecmd = cmd in
     let cout = Runtime.coq_channels.cout in
-    request_mode := Request_add cmd;
+    request_mode := Request_add (stateid, cmd);
     let add = Xmlprotocol.add ((ecmd, editid), (stateid, verbose)) in
     let xml_add = Xmlprotocol.of_call add in
     Xml_printer.print (Xml_printer.TChannel cout) xml_add;
-    log_coqtop true (Xml_printer.to_string xml_add);
-    Doc_model.try_add cmd
+    log_coqtop true (Xml_printer.to_string xml_add)
+    (* Doc_model.try_add cmd *)
 
-let response_add msg cmd =
+and response_add msg old_stateid cmd =
+    let add_success = ref false in
     begin
         match msg with
         | Good (stateid, (CSig.Inl (), content)) ->
+            add_success := true;
             if String.trim content <> "" then 
                 printf "new state id: %d, message content: %s\n" stateid content;
             Runtime.new_stateid := stateid;
-            Doc_model.finish_add stateid;
+            (* Doc_model.finish_add stateid; *)
+            Doc_model.add old_stateid cmd;
             flush stdout
         | Good (stateid, (CSig.Inr next_stateid, content)) ->
+            add_success := true;
             if String.trim content <> "" then 
                 printf "finished current proof, move to state id: %d, message content: %s\n" next_stateid content;
             Runtime.new_stateid := next_stateid;
-            Doc_model.finish_add stateid;
+            (* Doc_model.finish_add stateid; *)
+            Doc_model.add old_stateid cmd;
             flush stdout
         | Fail (stateid, _, xml_content) -> 
             printf "error add in state id %d, message content: " stateid;
@@ -133,10 +139,11 @@ let response_add msg cmd =
             print_endline "";
             flush stdout
     end;
-    request_goals ();
+    if (!add_success) then
+        request_goals ();
     flush coq_channels.cout
 
-let request_edit_at stateid = 
+and request_edit_at stateid = 
     let cout = Runtime.coq_channels.cout in
     request_mode := Request_edit_at stateid;
     let editat = Xmlprotocol.edit_at stateid in
@@ -144,7 +151,7 @@ let request_edit_at stateid =
     Xml_printer.print (Xml_printer.TChannel cout) xml_editat;
     log_coqtop true (Xml_printer.to_string xml_editat)
 
-let response_edit_at msg stateid =
+and response_edit_at msg stateid =
     begin
         match msg with
         | Good (CSig.Inl ()) ->
@@ -165,7 +172,7 @@ let response_edit_at msg stateid =
     request_goals (); (*fetch goals after edit at some new stateid*)
     flush coq_channels.cout
 
-let request_query query stateid = 
+and request_query query stateid = 
     let cout = Runtime.coq_channels.cout in
     request_mode := Request_query;
     let query = Xmlprotocol.query query in
@@ -173,12 +180,12 @@ let request_query query stateid =
     Xml_printer.print (Xml_printer.TChannel cout) xml_query;
     log_coqtop true (Xml_printer.to_string xml_query)
 
-let response_query msg = 
+and response_query msg = 
     match msg with
     | Good query -> print_endline query
     | _ -> printf "unknown from response query\n"; flush stdout
 
-let request_evars () = 
+and request_evars () = 
     let cout = Runtime.coq_channels.cout in
     request_mode := Request_evars;
     let evars = Xmlprotocol.evars () in
@@ -186,10 +193,10 @@ let request_evars () =
     Xml_printer.print (Xml_printer.TChannel cout) xml_evars;
     log_coqtop true (Xml_printer.to_string xml_evars)
 
-let response_evars msg =
+and response_evars msg =
     print_endline "response evars, not finished."
 
-let request_hints () = 
+and request_hints () = 
     let cout = Runtime.coq_channels.cout in
     request_mode := Request_hints;
     let hints = Xmlprotocol.hints () in
@@ -197,10 +204,10 @@ let request_hints () =
     Xml_printer.print (Xml_printer.TChannel cout) xml_hints;
     log_coqtop true (Xml_printer.to_string xml_hints)
 
-let response_hints msg =
+and response_hints msg =
     print_endline "response hints, not finished."
 
-let request_status force = 
+and request_status force = 
     let cout = Runtime.coq_channels.cout in
     request_mode := Request_status;
     let status = Xmlprotocol.status force in
@@ -208,10 +215,10 @@ let request_status force =
     Xml_printer.print (Xml_printer.TChannel cout) xml_status;
     log_coqtop true (Xml_printer.to_string xml_status)
 
-let response_status msg =
+and response_status msg =
     print_endline "response status, not finished"
 
-let request_search search_list = 
+and request_search search_list = 
     let cout = Runtime.coq_channels.cout in
     request_mode := Request_search;
     let search = Xmlprotocol.search search_list in
@@ -219,10 +226,10 @@ let request_search search_list =
     Xml_printer.print (Xml_printer.TChannel cout) xml_search;
     log_coqtop true (Xml_printer.to_string xml_search)
 
-let response_search msg = 
+and response_search msg = 
     print_endline "response search, not finished"
 
-let request_getoptions () = 
+and request_getoptions () = 
     let cout = Runtime.coq_channels.cout in
     request_mode := Request_getoptions;
     let getoptions = Xmlprotocol.get_options () in
@@ -230,10 +237,10 @@ let request_getoptions () =
     Xml_printer.print (Xml_printer.TChannel cout) xml_getoptions;
     log_coqtop true (Xml_printer.to_string xml_getoptions)
 
-let response_getoptions msg = 
+and response_getoptions msg = 
     print_endline "response getoptions, not finished"
 
-let request_setoptions options = 
+and request_setoptions options = 
     let cout = Runtime.coq_channels.cout in
     request_mode := Request_setoptions;
     let setoptions = Xmlprotocol.set_options options in
@@ -241,10 +248,10 @@ let request_setoptions options =
     Xml_printer.print (Xml_printer.TChannel cout) xml_setoptions;
     log_coqtop true (Xml_printer.to_string xml_setoptions)
 
-let response_setoptions msg = 
+and response_setoptions msg = 
     print_endline "response setoptions, not finished"
 
-let request_mkcases str = 
+and request_mkcases str = 
     let cout = Runtime.coq_channels.cout in
     request_mode := Request_mkcases;
     let mkcases = Xmlprotocol.mkcases str in
@@ -252,10 +259,10 @@ let request_mkcases str =
     Xml_printer.print (Xml_printer.TChannel cout) xml_mkcases;
     log_coqtop true (Xml_printer.to_string xml_mkcases)
 
-let response_mkcases msg = 
+and response_mkcases msg = 
     print_endline "response mkcases, not finished"
 
-let request_interp interp = 
+and request_interp interp = 
     let cout = Runtime.coq_channels.cout in
     request_mode := Request_interp;
     let interp = Xmlprotocol.interp interp in
@@ -263,10 +270,10 @@ let request_interp interp =
     Xml_printer.print (Xml_printer.TChannel cout) xml_interp;
     log_coqtop true (Xml_printer.to_string xml_interp)
 
-let response_interp msg = 
+and response_interp msg = 
     print_endline "response interp, not finished"
 
-let request_stopworker str = 
+and request_stopworker str = 
     let cout = Runtime.coq_channels.cout in
     request_mode := Request_stopworker;
     let stopworker = Xmlprotocol.stop_worker str in
@@ -274,10 +281,10 @@ let request_stopworker str =
     Xml_printer.print (Xml_printer.TChannel cout) xml_stopworker;
     log_coqtop true (Xml_printer.to_string xml_stopworker)
 
-let response_stopworker msg = 
+and response_stopworker msg = 
     print_endline "response stopworker, not finished"
 
-let request_printast stateid = 
+and request_printast stateid = 
     let cout = Runtime.coq_channels.cout in
     request_mode := Request_printast;
     let printast = Xmlprotocol.print_ast stateid in
@@ -285,10 +292,10 @@ let request_printast stateid =
     Xml_printer.print (Xml_printer.TChannel cout) xml_printast;
     log_coqtop true (Xml_printer.to_string xml_printast)
 
-let response_printast msg = 
+and response_printast msg = 
     print_endline "response printast, not finished"
 
-let request_annotate str = 
+and request_annotate str = 
     let cout = Runtime.coq_channels.cout in
     request_mode := Request_annotate;
     let annotate = Xmlprotocol.annotate str in
@@ -296,7 +303,7 @@ let request_annotate str =
     Xml_printer.print (Xml_printer.TChannel cout) xml_annotate;
     log_coqtop true (Xml_printer.to_string xml_annotate)
 
-let response_annotate msg = 
+and response_annotate msg = 
     print_endline "response annotate, not finished"
 
 (*************************************************************************************)
@@ -305,13 +312,13 @@ let interpret_feedback xml_fb =
     let fb = Xmlprotocol.to_feedback xml_fb in
     begin
         match fb.contents, fb.id with 
-        | Processed, State sid -> ()(*printf "Processed stateid %d\n" sid*); Doc_model.coqtop_processed sid
+        | Processed, State sid -> ()(*printf "Processed stateid %d\n" sid*); Doc_model.processed_stateid sid
         | Processed, Edit eid -> ()(*printf "Processed editid %d\n" eid*)
         | Incomplete, State sid -> ()(*printf "Incomplete stateid %d" sid*)
         | Incomplete, Edit eid -> ()(*printf "Incomplete editid %d" eid*)
         | Complete, State sid -> ()(*printf "Complete stateid %d" sid*)
         | Complete, Edit eid -> ()(*printf "Complete editid %d" eid*)
-        | ProcessingIn worker_name, State sid -> ()(*printf "ProcessingIn worker %s, stateid %d\n" worker_name sid*); Doc_model.coqtop_processing sid
+        | ProcessingIn worker_name, State sid -> ()(*printf "ProcessingIn worker %s, stateid %d\n" worker_name sid*); Doc_model.processing_stateid sid
         | ProcessingIn worker_name, Edit eid -> ()(*printf "ProcessingIn worker %s, editid %d\n" worker_name eid*)
         | InProgress i, State sid -> ()(*printf "InProgress %d, stateid %d" i sid*)
         | InProgress i, Edit eid -> ()(*printf "InProgress %d, editid %d" i eid *)
@@ -332,8 +339,8 @@ let interpret_feedback xml_fb =
         | Custom _, State sid -> ()(*printf "Custom ... stateid %d" sid*)
         | Custom _, Edit eid -> ()(*printf "Custom ... editid %d" eid*)
         | Message (levl, loc, xml_content), State sid -> 
-            if levl = Feedback.Error then
-                Doc_model.coqtop_processed sid;
+            (* if levl = Feedback.Error then
+                Doc_model.coqtop_processed sid; *)
             ()(*printf "Message %s, stateid %d" (str_feedback_level levl) sid; print_xml stdout xml_content*)
         | Message (levl, loc, xml_content), Edit eid -> ()(*printf "Message %s, editid %d" (str_feedback_level levl) eid; print_xml stdout xml_content*)
     end;
@@ -343,7 +350,7 @@ let interpret_feedback xml_fb =
 
 
 let handle_input input_str = 
-    Runtime.current_cmd_type := get_cmd_type input_str;
+    Coqv_utils.current_cmd_type := get_cmd_type input_str;
     Flags.running_coqv := false;
     request_add (input_str) (-1) !Runtime.new_stateid true;
     log_coqtop true input_str;
@@ -393,8 +400,8 @@ let handle_answer received_str =
                     | Request_setoptions -> response_setoptions (Xmlprotocol.to_answer (Xmlprotocol.set_options []) xml_str)
                     | Request_mkcases ->    response_mkcases (Xmlprotocol.to_answer (Xmlprotocol.mkcases "") xml_str)
                     | Request_quit ->       response_quit (Xmlprotocol.to_answer (Xmlprotocol.quit ()) xml_str)
-                    | Request_add cmd ->        
-                        response_add (Xmlprotocol.to_answer (Xmlprotocol.add (("",0),(0,true))) xml_str) cmd
+                    | Request_add (stateid, cmd) ->        
+                        response_add (Xmlprotocol.to_answer (Xmlprotocol.add (("",0),(0,true))) xml_str) stateid cmd
                     | Request_interp ->     response_interp (Xmlprotocol.to_answer (Xmlprotocol.interp ((true, true),"")) xml_str)
                     | Request_stopworker -> response_stopworker (Xmlprotocol.to_answer (Xmlprotocol.stop_worker "") xml_str)
                     | Request_printast ->   response_printast (Xmlprotocol.to_answer (Xmlprotocol.print_ast 0) xml_str)
@@ -437,8 +444,8 @@ let interpret_cmd cmd_str_list =
                 (* exit 0 *)
             | "export" ->
                 let eout = open_out (List.hd options) in
-                let cmd_list = List.rev !Doc_model.doc in
-                List.iter (fun (stateid, cmd) -> output_string eout cmd; output_string eout "\n"; if cmd="Qed." then output_string eout "\n") cmd_list;
+                let cmd_list = Doc_model.get_committed_commands () in
+                List.iter (fun cmd -> output_string eout cmd; output_string eout "\n"; if cmd="Qed." then output_string eout "\n") cmd_list;
                 flush eout;
                 close_out eout
             | "import" ->
