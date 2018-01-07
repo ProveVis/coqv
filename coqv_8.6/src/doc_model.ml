@@ -23,7 +23,7 @@ let rec str_doc_built docc =
     begin
         match docc.last with
         | None -> ()
-        | Some (command, last_docc) -> tmp_str := !tmp_str^"\n\t--"^command^"-->\n"^(str_doc_built last_docc)
+        | Some (command, last_docc) -> tmp_str := (str_doc_built last_docc)^"\n\t--"^command^"-->\n"^(!tmp_str)
     end;
     !tmp_str
 
@@ -71,6 +71,19 @@ let commit () =
     match !current_doc with
     | None -> ()
     | Some docc -> commit_rec docc
+
+let discard_uncommitted () = 
+    let rec rec_latest_committed docc = 
+        if docc.status = Committed then
+            Some docc
+        else begin
+            match docc.last with
+            | None -> None
+            | Some (cmd, docc') -> rec_latest_committed docc'
+        end in
+    match !current_doc with
+    | None -> ()
+    | Some docc -> current_doc := rec_latest_committed docc
 
 let latest_committed_stateid () =
     let rec rec_latest_committed docc = 

@@ -40,10 +40,12 @@ let undo_upto stateid =
         end
     done
 
-let str_history () = 
-    match !Doc_model.current_doc with
-    | None -> "No History"
-    | Some docc -> Doc_model.str_doc_built docc
+let str_history () = begin
+        match !Doc_model.current_doc with
+        | None -> "No History"
+        | Some docc -> Doc_model.str_doc_built docc
+    end^
+    ("\n\nRuntime.new_stateid: "^(string_of_int !Runtime.new_stateid))
     (* match !history with
     | [] -> "None"
     | h :: hs ->

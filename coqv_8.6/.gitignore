@@ -12,3 +12,4 @@ src/utils/xmlutils.mlpack
 configure
 Makefile
 .DS_Store
+log/

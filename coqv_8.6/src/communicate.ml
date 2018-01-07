@@ -1,7 +1,7 @@
 open Printf
 open Types
 open Runtime
-open Protocol_json
+open Vmdv_protocol
 
 type visualize_agent =
     {

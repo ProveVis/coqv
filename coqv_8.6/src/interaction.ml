@@ -55,7 +55,8 @@ and request_init filename =
 and response_init msg = 
     match msg with
     | Good stateid -> 
-        Runtime.new_stateid := stateid
+        Runtime.new_stateid := stateid;
+        Doc_model.init_doc ()
     | _ -> printf "unknown from response init\n"; flush stdout    
 
 and request_quit () = 
@@ -92,8 +93,11 @@ and response_goals msg =
                 current_session_id := "";
                 History.record_step !Runtime.new_stateid Dummy
             | _ -> ()
-        end
-    | Good (Some goals) -> on_receive_goals !Coqv_utils.current_cmd_type goals
+        end;
+        Doc_model.commit ()
+    | Good (Some goals) -> 
+        on_receive_goals !Coqv_utils.current_cmd_type goals;
+        Doc_model.commit ()
     | Fail (id,loc, msg) -> 
         print_endline "fail to get goals";
         printf "Fail at stateid %d: %s\n" id (richpp_to_string msg);
@@ -123,7 +127,7 @@ and response_add msg old_stateid cmd =
                 printf "new state id: %d, message content: %s\n" stateid content;
             Runtime.new_stateid := stateid;
             (* Doc_model.finish_add stateid; *)
-            Doc_model.add old_stateid cmd;
+            Doc_model.add stateid cmd;
             flush stdout
         | Good (stateid, (CSig.Inr next_stateid, content)) ->
             add_success := true;
@@ -131,7 +135,7 @@ and response_add msg old_stateid cmd =
                 printf "finished current proof, move to state id: %d, message content: %s\n" next_stateid content;
             Runtime.new_stateid := next_stateid;
             (* Doc_model.finish_add stateid; *)
-            Doc_model.add old_stateid cmd;
+            Doc_model.add stateid cmd;
             flush stdout
         | Fail (stateid, _, xml_content) -> 
             printf "error add in state id %d, message content: " stateid;
@@ -169,7 +173,7 @@ and response_edit_at msg stateid =
             flush stdout;
             request_edit_at errorFreeStateId
     end;
-    request_goals (); (*fetch goals after edit at some new stateid*)
+    (*request_goals (); (*fetch goals after edit at some new stateid*)*)
     flush coq_channels.cout
 
 and request_query query stateid = 

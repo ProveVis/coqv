@@ -160,24 +160,3 @@ let msg_of_json json =
             end
     with
     | _ -> failwith "not a valid json value"
-    
-(* 
-    match json with
-    | `Assoc str_json_list -> begin
-            match get_string_of_json (get_json_of_key "type" str_json_list) with
-            | "highlight_node" -> 
-                Highlight_node ((get_string_of_json (get_json_of_key "session_id" str_json_list)), (get_string_of_json (get_json_of_key "node_id" str_json_list)))
-            | "unhighlight_node" -> 
-                Unhighlight_node ((get_string_of_json (get_json_of_key "session_id" str_json_list)), (get_string_of_json (get_json_of_key "node_id" str_json_list)))
-            | "clear_color" ->
-                Clear_color (get_string_of_json (get_json_of_key "session_id" str_json_list))
-            | "feedback" -> 
-                let status = get_string_of_json (get_json_of_key "status" str_json_list) in
-                if status = "OK" then
-                    Feedback_ok (get_string_of_json (get_json_of_key "session_id" str_json_list))
-                else
-                    Feedback_fail ((get_string_of_json (get_json_of_key "session_id" str_json_list)), (get_string_of_json (get_json_of_key "error_msg" str_json_list)))
-            | _ as s -> printf "not supposed to be received by coqv: %s\n" s; exit 1
-        end
-    | _ -> printf "%s is not a message\n" (Yojson.Basic.to_string json); exit 1
- *)

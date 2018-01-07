@@ -139,6 +139,7 @@ let on_receive_goals cmd_type goals =
 let on_edit_at stateid = 
     Runtime.new_stateid := stateid;
     Doc_model.reset_process_stateid ();
+    Doc_model.discard_uncommitted ();
     print_endline ("now edit at stateid "^(string_of_int stateid))
     (* Doc_model.move_focus_to stateid;
     Runtime.new_stateid := stateid;
