@@ -115,10 +115,21 @@ let _ =
                     with _ -> print_endline ("connect to vmdv in "^s^" failed.")
                 ), "\tIP address of the VMDV.";
             "-debug", Arg.Unit (fun () -> 
-                    Flags.debug := true;
-                    Runtime.logs := Some {
-                        coqtop_log = open_out ("./log/"^(!Flags.xml_log_file)); 
-                        vmdv_log = open_out ("./log/"^(!Flags.json_log_file))}
+                    if not (Sys.file_exists "log") then begin
+                        let log_dir_created = Sys.command "mkdir log" in
+                        if log_dir_created <> 0 then begin
+                            print_endline "Warning: cannot create directory log, now running in non-debug mode";
+                        end else begin
+                            Flags.debug := true
+                        end
+                    end else begin
+                        Flags.debug := true
+                    end;
+                    if !Flags.debug = true then begin
+                        Runtime.logs := Some {
+                            coqtop_log = open_out ("./log/"^(!Flags.xml_log_file)); 
+                            vmdv_log = open_out ("./log/"^(!Flags.json_log_file))}
+                    end
                 ), "\tUsing debug mode or not."
         ]
         (fun s -> print_endline ("unknown option"^s))

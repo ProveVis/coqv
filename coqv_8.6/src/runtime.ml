@@ -24,7 +24,6 @@ let coq_channels : channels = {
 let prompt = ref "Coq < "
 let ignored_re () = Str.regexp !prompt
 
-let new_stateid = ref 0
 let running = ref true
 
 

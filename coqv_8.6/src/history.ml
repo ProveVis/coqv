@@ -45,10 +45,4 @@ let str_history () = begin
         | None -> "No History"
         | Some docc -> Doc_model.str_doc_built docc
     end^
-    ("\n\nRuntime.new_stateid: "^(string_of_int !Runtime.new_stateid))
-    (* match !history with
-    | [] -> "None"
-    | h :: hs ->
-        let str_buf = ref ((string_of_int (fst h))^", "^(string_of_int (List.length (snd h)))^", "^(Doc_model.get_cmd (fst h))^"\n") in
-        List.iter (fun (sid, steps) -> str_buf := !str_buf^"<--"^(string_of_int sid)^", "^(string_of_int (List.length steps))^", "^(Doc_model.get_cmd sid)^"\n") hs;
-        !str_buf *)
+    ("\n\ncurrent_stateid: "^(string_of_int !Doc_model.current_stateid))

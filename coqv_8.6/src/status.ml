@@ -5,7 +5,7 @@ open Interface
 
 let str_status () = 
     let str_coqinfo = sprintf "coq version: %s" (!coqtop_info).coqtop_version in
-    let str_stateid = sprintf "current stateid: %d" !new_stateid in
+    let str_stateid = sprintf "current stateid: %d" !Doc_model.current_stateid in
     let str_history = sprintf "history recorded: %d records" (List.length !History.history) in
     let str_session = sprintf "current session: %s" begin
             match !Proof_model.current_session_id with

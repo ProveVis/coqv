@@ -55,7 +55,7 @@ and request_init filename =
 and response_init msg = 
     match msg with
     | Good stateid -> 
-        Runtime.new_stateid := stateid;
+        Doc_model.current_stateid := stateid;
         Doc_model.init_doc ()
     | _ -> printf "unknown from response init\n"; flush stdout    
 
@@ -91,7 +91,7 @@ and response_goals msg =
             match !Coqv_utils.current_cmd_type with
             | Qed -> 
                 current_session_id := "";
-                History.record_step !Runtime.new_stateid Dummy
+                History.record_step !Doc_model.current_stateid Dummy
             | _ -> ()
         end;
         Doc_model.commit ()
@@ -125,7 +125,7 @@ and response_add msg old_stateid cmd =
             add_success := true;
             if String.trim content <> "" then 
                 printf "new state id: %d, message content: %s\n" stateid content;
-            Runtime.new_stateid := stateid;
+            Doc_model.current_stateid := stateid;
             (* Doc_model.finish_add stateid; *)
             Doc_model.add stateid cmd;
             flush stdout
@@ -133,7 +133,7 @@ and response_add msg old_stateid cmd =
             add_success := true;
             if String.trim content <> "" then 
                 printf "finished current proof, move to state id: %d, message content: %s\n" next_stateid content;
-            Runtime.new_stateid := next_stateid;
+            Doc_model.current_stateid := next_stateid;
             (* Doc_model.finish_add stateid; *)
             Doc_model.add stateid cmd;
             flush stdout
@@ -356,7 +356,7 @@ let interpret_feedback xml_fb =
 let handle_input input_str = 
     Coqv_utils.current_cmd_type := get_cmd_type input_str;
     Flags.running_coqv := false;
-    request_add (input_str) (-1) !Runtime.new_stateid true;
+    request_add (input_str) (-1) !Doc_model.current_stateid true;
     log_coqtop true input_str;
     flush stdout
 

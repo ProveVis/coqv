@@ -17,7 +17,7 @@ let on_new_session (session: session) =
     add_session_to_modul (List.hd !moduls) session;
     (*printf "%d moduls at the moment\n" (List.length !moduls);*)
     let node = session.proof_tree.root in
-    History.record_step !Runtime.new_stateid (Add_node node.id);
+    History.record_step !Doc_model.current_stateid (Add_node node.id);
     begin
         match !Communicate.vagent with
         | None -> (*print_endline "no vmdv agent currently"*)()
@@ -28,7 +28,7 @@ let on_new_session (session: session) =
 
 let on_change_node_state (node:node) state = 
     if node.state <> state then begin
-        History.record_step !Runtime.new_stateid (Change_state (node.id, node.state));
+        History.record_step !Doc_model.current_stateid (Change_state (node.id, node.state));
         change_node_state node.id state
     end
 
@@ -38,7 +38,7 @@ let on_change_node_label (node:node) new_label tactic =
 let on_add_node node_from node_to state = 
     let label = Doc_model.uncommitted_command () in
     add_edge node_from node_to [label];
-    History.record_step !Runtime.new_stateid (Add_node node_to.id);
+    History.record_step !Doc_model.current_stateid (Add_node node_to.id);
     node_to.state <- state;
     begin
         match !Communicate.vagent with
@@ -63,7 +63,7 @@ let add_new_goals focus_mode goals =
             label = goal_to_label g;
             state = To_be_chosen;
             parent = cnode;
-            stateid = !Runtime.new_stateid;
+            stateid = !Doc_model.current_stateid;
         }) fg_goals in
         if List.length new_nodes = 0 then begin
             print_endline "No more goals.";
@@ -109,14 +109,14 @@ let on_receive_goals cmd_type goals =
                 label = label;
                 state = Chosen;
                 parent = node;
-                stateid = !Runtime.new_stateid;
+                stateid = !Doc_model.current_stateid;
             } in
             let proof_tree = new_proof_tree node in
             let session = new_session thm_name kind Processing proof_tree in
             on_new_session session
         | Qed -> 
             current_session_id := "";
-            History.record_step !Runtime.new_stateid Dummy
+            History.record_step !Doc_model.current_stateid Dummy
         | Focus _ ->
             add_new_goals true goals
         | Other -> 
@@ -137,10 +137,10 @@ let on_receive_goals cmd_type goals =
             
 
 let on_edit_at stateid = 
-    Runtime.new_stateid := stateid;
+    Doc_model.current_stateid := stateid;
     Doc_model.reset_process_stateid ();
     Doc_model.discard_uncommitted ();
     print_endline ("now edit at stateid "^(string_of_int stateid))
     (* Doc_model.move_focus_to stateid;
-    Runtime.new_stateid := stateid;
+    Doc_model.current_stateid := stateid;
     History.undo_upto stateid *)
