@@ -144,7 +144,9 @@ and response_add msg old_stateid cmd =
             flush stdout
     end;
     if (!add_success) then
-        request_goals ();
+        request_goals ()
+    else
+        Doc_model.goal_responsed := true;
     flush coq_channels.cout
 
 and request_edit_at stateid = 
