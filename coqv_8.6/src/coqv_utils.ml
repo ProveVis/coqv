@@ -70,6 +70,7 @@ let get_cmd_type cmd =
     | "Fact" :: tl_split -> Proof (List.hd tl_split, Fact)
     | "Goal" :: tl_split -> Proof ("Unnamed_thm", Goal)
     | "Qed" :: tl_split -> Qed
+    | "Focus" :: tl_split -> Focus (int_of_string (List.hd tl_split))
     | "Require" :: tl_split -> Require
     | "move" :: tl_split -> Edit_label
     | "rename" :: tl_split -> Edit_label

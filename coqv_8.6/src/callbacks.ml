@@ -81,6 +81,9 @@ let add_new_goals focus_mode goals =
                     on_change_node_state cnode Proved;
                     add_tactic cnode.id (Doc_model.uncommitted_command ())
                 end
+            end else begin
+                on_change_node_state cnode To_be_chosen;
+                add_tactic cnode.id (Doc_model.uncommitted_command ())
             end;
             List.iter (fun n ->
                 if node_exists n.id then
