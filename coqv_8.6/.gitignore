@@ -1,7 +1,4 @@
 _build/
-myocamlbuild.ml
-setup.ml
-setup.data
 Makefile_old
 .vscode/
 *.mllib
@@ -12,4 +9,9 @@ src/utils/xmlutils.mlpack
 configure
 Makefile
 .DS_Store
-log/
+log/*
+coqv
+setup.data
+setup.log
+setup.ml
+myocamlbuild.ml

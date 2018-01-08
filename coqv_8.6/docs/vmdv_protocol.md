@@ -1,15 +1,15 @@
-# Introduction
+# JSON protocol of [VMDV](https://github.com/terminatorlxj/VMDV)
 
 The messages that vmdv and proof systems send to each other consists of two parts: 
 
-​ **commands** and **feedbacks**.
+  **commands** and **feedbacks**.
 
 Both proof systems or vmdv can send **commands** to each other and, for each **command** sent by one side, there is a **feedback** message sent by the other side. 
 
 
 ## 1. Commands
 
-* Create Session (proof systems —> vmdv):
+* Create Session (proof systems --> vmdv):
 
   ```json
   {
@@ -22,7 +22,7 @@ Both proof systems or vmdv can send **commands** to each other and, for each **c
 
   Remark: `graph_type` can be either `"Tree"` or `"DiGraph"`.
 
-* Remove Session (proof systems —> vmdv):
+* Remove Session (proof systems --> vmdv):
 
   ```json
   {
@@ -32,7 +32,7 @@ Both proof systems or vmdv can send **commands** to each other and, for each **c
   ```
 
 
-* Add node (proof systems —> vmdv):
+* Add node (proof systems --> vmdv):
 
   ```json
   {
@@ -58,7 +58,7 @@ Both proof systems or vmdv can send **commands** to each other and, for each **c
   }
   ```
 
-- Add edge (proof systems —> vmdv):
+- Add edge (proof systems �?> vmdv):
 
   ```json
   {
@@ -82,7 +82,7 @@ Both proof systems or vmdv can send **commands** to each other and, for each **c
   }
   ```
 
-- Change node state (proof systems —> vmdv):
+- Change node state (proof systems --> vmdv):
 
   ```json
   {
@@ -93,7 +93,7 @@ Both proof systems or vmdv can send **commands** to each other and, for each **c
   }
   ```
 
-- Highlight node (vmdv <—> proof systems):
+- Highlight node (vmdv <--> proof systems):
 
   ```json
   {
@@ -122,11 +122,10 @@ Both proof systems or vmdv can send **commands** to each other and, for each **c
   }
   ```
 
-  ​
 
 ## 2. Feedback for commands
 
-Feedback (vmdv —> proof systems):
+Feedback (vmdv --> proof systems):
 
 ```json
 {
