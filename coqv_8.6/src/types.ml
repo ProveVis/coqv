@@ -10,25 +10,23 @@ let str_proof_kind pk =
     | Fact -> "Fact"
     | Goal -> "Goal"
 
-type proof_state = Start | Processing | Complete | Aborted | Assumed
+type proof_state = Proving | Defined | Declared
 let str_proof_state ps = 
     match ps with
-    | Start -> "Start"
-    | Processing -> "Processing"
-    | Complete -> "Complete"
-    | Aborted -> "Aborted"
-    | Assumed -> "Assumed"
+    | Proving -> "Proving"      (*proposition is under proof*)
+    | Defined -> "Defined"      (*proof was closed by "Qed."*)
+    | Declared -> "Declared"    (*proof was closed by "Admitted."*)
 
-type node_state = Not_proved | Proved | Assumed | To_be_chosen | Chosen
+type node_state = Not_proved | Proved | Admitted | To_be_chosen | Chosen
 let str_node_state ns =
     match ns with
     | Not_proved -> "Not_proved"
     | Proved -> "Proved"
-    | Assumed -> "Assumed"
+    | Admitted -> "Admitted"
     | To_be_chosen -> "To_be_chosen"
     | Chosen -> "Chosen"
 
-let node_state_list = [Not_proved; Proved; Assumed; To_be_chosen; Chosen]
+let node_state_list = [Not_proved; Proved; Admitted; To_be_chosen; Chosen]
 
 type label = {
         id: string;

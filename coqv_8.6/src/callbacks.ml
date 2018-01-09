@@ -51,7 +51,7 @@ let on_add_node node_from node_to state =
             end
     end
 
-let add_new_goals focus_mode goals =     
+let add_new_goals cmd_type goals =     
     let fg_goals = goals.fg_goals in
     let chosen_node = select_chosen_node () in
     (match chosen_node with
@@ -67,10 +67,33 @@ let add_new_goals focus_mode goals =
         }) fg_goals in
         if List.length new_nodes = 0 then begin
             print_endline "No more goals.";
-            on_change_node_state cnode Proved;
+            if cmd_type = Admit then
+                on_change_node_state cnode Admitted
+            else
+                on_change_node_state cnode Proved;
             add_tactic cnode.id (Doc_model.uncommitted_command ())
         end else begin
-            if not focus_mode then begin
+            begin match cmd_type with
+            | Focus _ ->
+                on_change_node_state cnode To_be_chosen;
+                add_tactic cnode.id (Doc_model.uncommitted_command ())
+            | Admit -> 
+                on_change_node_state cnode Admitted;
+                add_tactic cnode.id (Doc_model.uncommitted_command ())
+            | Other -> 
+                let has_new = List.fold_left (fun b n -> 
+                if b then 
+                    b 
+                else
+                    not (node_exists n.id) 
+                ) false new_nodes in
+                if not has_new then begin
+                    on_change_node_state cnode Proved;
+                    add_tactic cnode.id (Doc_model.uncommitted_command ())
+                end
+            | _ -> ()
+            end;
+            (* if not focus_mode then begin
                 let has_new = List.fold_left (fun b n -> 
                     if b then 
                         b 
@@ -84,7 +107,7 @@ let add_new_goals focus_mode goals =
             end else begin
                 on_change_node_state cnode To_be_chosen;
                 add_tactic cnode.id (Doc_model.uncommitted_command ())
-            end;
+            end; *)
             List.iter (fun n ->
                 if node_exists n.id then
                     on_change_node_state (get_node n.id) To_be_chosen
@@ -103,7 +126,7 @@ let on_receive_goals cmd_type goals =
         match cmd_type with
         | Module modul_name -> moduls := (create_module modul_name) :: !moduls
         | End modul_name -> closing_modul modul_name
-        | Proof (thm_name, kind) -> 
+        | Proposition (thm_name, kind) -> 
             assert(List.length (goals.fg_goals) <> 0);
             let goal = List.hd (goals.fg_goals) in
             let label = goal_to_label goal in
@@ -115,15 +138,18 @@ let on_receive_goals cmd_type goals =
                 stateid = !Doc_model.current_stateid;
             } in
             let proof_tree = new_proof_tree node in
-            let session = new_session thm_name kind Processing proof_tree in
+            let session = new_session thm_name kind Proving proof_tree in
             on_new_session session
+        | Proof -> ()
         | Qed -> 
+            Proof_model.change_current_proof_state Defined;
             current_session_id := "";
             History.record_step !Doc_model.current_stateid Dummy
-        | Focus _ ->
-            add_new_goals true goals
-        | Other -> 
-            add_new_goals false goals
+        | Admitted ->
+            print_endline "current proof tree is admitted";
+            Proof_model.change_current_proof_state Declared;
+            current_session_id := ""
+        | Focus _  | Admit | Other -> add_new_goals cmd_type goals
         | Require -> ()
         | Edit_label -> begin
                 let chosen_node = select_chosen_node () in

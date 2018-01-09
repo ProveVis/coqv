@@ -43,9 +43,12 @@ let caught_str str =
 type cmd_type = 
     Module of string
     | End of string
-    | Proof of string * proof_kind
+    | Proposition of string * proof_kind
+    | Proof
     | Qed
+    | Admitted
     | Focus of int
+    | Admit
     | Require
     | Edit_label
     | Other
@@ -62,13 +65,14 @@ let get_cmd_type cmd =
             Module (List.hd tl_split)
         else Other
     | "End" :: tl_split -> End (List.hd tl_split)
-    | "Theorem" :: tl_split -> Proof (List.hd tl_split, Theorem)
-    | "Lemma" :: tl_split -> Proof (List.hd tl_split, Lemma)
-    | "Proposition" :: tl_split -> Proof (List.hd tl_split, Proposition)
-    | "Corollary" :: tl_split -> Proof (List.hd tl_split, Corollary)
-    | "Remark" :: tl_split -> Proof (List.hd tl_split, Remark)
-    | "Fact" :: tl_split -> Proof (List.hd tl_split, Fact)
-    | "Goal" :: tl_split -> Proof ("Unnamed_thm", Goal)
+    | "Theorem" :: tl_split -> Proposition (List.hd tl_split, Theorem)
+    | "Lemma" :: tl_split -> Proposition (List.hd tl_split, Lemma)
+    | "Proposition" :: tl_split -> Proposition (List.hd tl_split, Proposition)
+    | "Corollary" :: tl_split -> Proposition (List.hd tl_split, Corollary)
+    | "Remark" :: tl_split -> Proposition (List.hd tl_split, Remark)
+    | "Fact" :: tl_split -> Proposition (List.hd tl_split, Fact)
+    | "Goal" :: tl_split -> Proposition ("Unnamed_thm", Goal)
+    | "Proof" :: tl_split -> Proof
     | "Qed" :: tl_split -> Qed
     | "Focus" :: tl_split -> Focus (int_of_string (List.hd tl_split))
     | "Require" :: tl_split -> Require
@@ -79,15 +83,21 @@ let get_cmd_type cmd =
     | "pose" :: tl_split -> Edit_label
     | "clear" :: tl_split -> Edit_label
     | "clearbody" :: tl_split -> Edit_label
+    | "Admitted" :: tl_split -> Admitted
+    | "admit" :: tl_split -> Admit
+    | "give_up" :: tl_split -> Admit
     | _ -> Other
 
 let str_cmd_type ct = 
     match ct with
     | Module mname -> "Module "^mname
     | End mname -> "End "^mname
-    | Proof (thm_name, pk) -> "Proof "^(str_proof_kind pk)^" "^thm_name
+    | Proposition (thm_name, pk) -> "Proposition "^(str_proof_kind pk)^" "^thm_name
+    | Proof -> "Proof"
     | Qed -> "Qed"
+    | Admitted -> "Admitted"
     | Focus _ -> "Focus"
+    | Admit -> "Admit"
     | Require -> "Require"
     | Edit_label -> "Edit_label"
     | Other -> "Other"

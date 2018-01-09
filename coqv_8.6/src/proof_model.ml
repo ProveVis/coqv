@@ -8,12 +8,9 @@ let create_module modul_name =
         modul_tbl = Hashtbl.create 1;
     }
 
-
 let current_session_id = ref ""
 let top_module = create_module "Unnamed_module"
 let moduls = ref [top_module]
-
-(*let coq_state_id = ref 0*)
 
 let new_proof_tree node = 
     {
@@ -41,9 +38,6 @@ let closing_modul name =
         moduls := List.tl !moduls
     end else
         ()
-    (*begin
-        raise (Closing_wrong_module (fst_modul.name, name))  
-    end*)
 
 let current_proof_tree () = 
     match !current_session_id with
@@ -95,13 +89,26 @@ let show node =
     printf "showing node %s\n" node.id;
     flush stdout
 
-let is_children_complete proof_tree nodeid = 
+let is_children_proved proof_tree nodeid = 
     if Hashtbl.mem proof_tree.edges nodeid then begin
         let _, children_id = Hashtbl.find proof_tree.edges nodeid in
         let flag = ref true in
         List.iter (fun cid -> 
             match (Hashtbl.find proof_tree.nodes cid).state with
-            | Proved | Assumed -> ()
+            | Proved -> ()
+            | _ -> flag := false
+        ) children_id;
+        !flag
+    end else 
+        true
+
+let is_children_admitted proof_tree nodeid = 
+    if Hashtbl.mem proof_tree.edges nodeid then begin
+        let _, children_id = Hashtbl.find proof_tree.edges nodeid in
+        let flag = ref true in
+        List.iter (fun cid -> 
+            match (Hashtbl.find proof_tree.nodes cid).state with
+            | Admitted | Proved -> ()
             | _ -> flag := false
         ) children_id;
         !flag
@@ -114,9 +121,11 @@ let change_node_state nid state =
     (*printf "changing node %s to state %s\n" nid (str_node_state state);*)
     node.state <- state;
     let rec change_others other_node = 
-        if is_children_complete proof_tree other_node.id then
+        if is_children_proved proof_tree other_node.id then
             other_node.state <- Proved
-        else 
+        else if is_children_admitted proof_tree other_node.id then
+            other_node.state <- Admitted
+        else
             other_node.state <- Not_proved;
         if other_node.id <> other_node.parent.id then
             change_others other_node.parent in
@@ -205,3 +214,12 @@ let find_session sn_path =
                 find_in_moduls sp' next_modul
             with Not_found -> None) in
     find_in_moduls sn_path (List.hd !moduls)
+
+let change_current_proof_state pstate = 
+    match !current_session_id with
+    | "" -> print_endline "Not proving propositions"
+    | sid -> 
+        try
+            let session = Hashtbl.find ((List.hd !moduls).sessions) sid in
+            session.state <- pstate
+        with Not_found -> print_endline ("Could not find "^sid)

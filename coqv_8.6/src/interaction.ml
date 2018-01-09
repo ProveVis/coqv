@@ -90,8 +90,18 @@ and response_goals msg =
         begin
             match !Coqv_utils.current_cmd_type with
             | Qed -> 
+                Proof_model.change_current_proof_state Defined;
                 current_session_id := "";
                 History.record_step !Doc_model.current_stateid Dummy
+            | Admitted ->
+                let chosen_node = select_chosen_node () in
+                begin match chosen_node with
+                | None -> ()
+                | Some cnode -> Callbacks.on_change_node_state cnode Admitted
+                end;
+                print_endline "current proof tree is admitted";
+                Proof_model.change_current_proof_state Declared;
+                current_session_id := ""
             | _ -> ()
         end;
         Doc_model.commit ()
@@ -356,6 +366,7 @@ let interpret_feedback xml_fb =
 
 
 let handle_input input_str = 
+    printf "cmd: %s, type: %s\n" input_str (str_cmd_type (get_cmd_type input_str));
     Coqv_utils.current_cmd_type := get_cmd_type input_str;
     Flags.running_coqv := false;
     request_add (input_str) (-1) !Doc_model.current_stateid true;
