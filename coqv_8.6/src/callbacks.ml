@@ -151,7 +151,7 @@ let on_receive_goals cmd_type goals =
             current_session_id := ""
         | Focus _  | Admit | Other -> add_new_goals cmd_type goals
         | Require -> ()
-        | Edit_label -> begin
+        (* | Edit_label -> begin
                 let chosen_node = select_chosen_node () in
                 match chosen_node with
                 | None -> print_endline "error finding the current chosen node when editing the label"
@@ -161,7 +161,7 @@ let on_receive_goals cmd_type goals =
                     let new_label = goal_to_label new_goal in
                     print_endline ("new label for "^(cnode.id)^": \n"^(str_label new_label));
                     on_change_node_label cnode new_label (Doc_model.uncommitted_command ())
-            end
+            end *)
     end
             
 

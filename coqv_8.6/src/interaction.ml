@@ -366,7 +366,7 @@ let interpret_feedback xml_fb =
 
 
 let handle_input input_str = 
-    printf "cmd: %s, type: %s\n" input_str (str_cmd_type (get_cmd_type input_str));
+    (* printf "cmd: %s, type: %s\n" input_str (str_cmd_type (get_cmd_type input_str)); *)
     Coqv_utils.current_cmd_type := get_cmd_type input_str;
     Flags.running_coqv := false;
     request_add (input_str) (-1) !Doc_model.current_stateid true;

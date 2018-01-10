@@ -50,7 +50,7 @@ type cmd_type =
     | Focus of int
     | Admit
     | Require
-    | Edit_label
+    (* | Edit_label *)
     | Other
 
 let current_cmd_type = ref Other
@@ -76,13 +76,13 @@ let get_cmd_type cmd =
     | "Qed" :: tl_split -> Qed
     | "Focus" :: tl_split -> Focus (int_of_string (List.hd tl_split))
     | "Require" :: tl_split -> Require
-    | "move" :: tl_split -> Edit_label
+    (* | "move" :: tl_split -> Edit_label
     | "rename" :: tl_split -> Edit_label
     | "set" :: tl_split -> Edit_label
     | "remember" :: tl_split -> Edit_label
     | "pose" :: tl_split -> Edit_label
     | "clear" :: tl_split -> Edit_label
-    | "clearbody" :: tl_split -> Edit_label
+    | "clearbody" :: tl_split -> Edit_label *)
     | "Admitted" :: tl_split -> Admitted
     | "admit" :: tl_split -> Admit
     | "give_up" :: tl_split -> Admit
@@ -99,7 +99,7 @@ let str_cmd_type ct =
     | Focus _ -> "Focus"
     | Admit -> "Admit"
     | Require -> "Require"
-    | Edit_label -> "Edit_label"
+    (* | Edit_label -> "Edit_label" *)
     | Other -> "Other"
 
 let rec richpp_to_string richpp = 
