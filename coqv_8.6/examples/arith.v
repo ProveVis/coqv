@@ -6,8 +6,6 @@ Fixpoint add n m :=
 Theorem addnS: forall n m, add n (S m) = S (add n m).
 Proof.
   induction n.
-Focus 2.
-Unfocus.
   intros m; simpl.
   reflexivity.
   intros m; simpl.
