@@ -162,6 +162,7 @@ let open_utf8_file_in fname =
     (Char.code s.[2]) = 0xBF
   in
   let in_chan = open_in fname in
-  let s = "   " in
-  if input in_chan s 0 3 < 3 || not (is_bom s) then seek_in in_chan 0;
+  (* let s = "   " in *)
+  let s = Bytes.init 3 (fun i -> ' ') in 
+  if input in_chan s 0 3 < 3 || not (is_bom (Bytes.to_string s)) then seek_in in_chan 0;
   in_chan
