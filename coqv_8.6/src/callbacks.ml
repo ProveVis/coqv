@@ -29,7 +29,16 @@ let on_new_session (session: session) =
 let on_change_node_state (node:node) state = 
     if node.state <> state then begin
         History.record_step !Doc_model.current_stateid (Change_state (node.id, node.state));
-        change_node_state node.id state
+        change_node_state node.id state;
+        begin
+            match !Communicate.vagent with
+            | None -> (*print_endline "no vmdv agent currently"*)()
+            | Some vagt ->
+                let sid = !Proof_model.current_session_id in
+                if sid <> "" then begin
+                    Communicate.change_node_state vagt sid node.id state
+                end
+        end
     end
 
 let on_change_node_label (node:node) new_label tactic = 
@@ -93,21 +102,6 @@ let add_new_goals cmd_type goals =
                 end
             | _ -> ()
             end;
-            (* if not focus_mode then begin
-                let has_new = List.fold_left (fun b n -> 
-                    if b then 
-                        b 
-                    else
-                        not (node_exists n.id) 
-                    ) false new_nodes in
-                if not has_new then begin
-                    on_change_node_state cnode Proved;
-                    add_tactic cnode.id (Doc_model.uncommitted_command ())
-                end
-            end else begin
-                on_change_node_state cnode To_be_chosen;
-                add_tactic cnode.id (Doc_model.uncommitted_command ())
-            end; *)
             List.iter (fun n ->
                 if node_exists n.id then
                     on_change_node_state (get_node n.id) To_be_chosen
@@ -151,17 +145,6 @@ let on_receive_goals cmd_type goals =
             current_session_id := ""
         | Focus _  | Admit | Other -> add_new_goals cmd_type goals
         | Require -> ()
-        (* | Edit_label -> begin
-                let chosen_node = select_chosen_node () in
-                match chosen_node with
-                | None -> print_endline "error finding the current chosen node when editing the label"
-                | Some cnode -> 
-                    assert (List.length goals.fg_goals > 0);
-                    let new_goal = List.hd (goals.fg_goals) in
-                    let new_label = goal_to_label new_goal in
-                    print_endline ("new label for "^(cnode.id)^": \n"^(str_label new_label));
-                    on_change_node_label cnode new_label (Doc_model.uncommitted_command ())
-            end *)
     end
             
 
