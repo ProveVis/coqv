@@ -12,14 +12,14 @@ Executable coqv
   MainIs:     repl.ml
   CompiledObject: best
   Install: false
-  BuildDepends: xmlutils, unix, threads, yojson, str
+  BuildDepends: xmllib, utils, unix, threads, yojson, str
 
 
-Library xmlutils
+Library xmllib
   Pack: true
-  Path:       src/utils
+  Path:       src/xmllib
   BuildTools: ocamlbuild
-  FindlibName: xmlutils
+  FindlibName: xmllib
   CompiledObject: best
   Modules: Xml_datatype, Xml_lexer, Xml_parser,
            Xml_printer, CSig, Store, Exninfo,
@@ -29,3 +29,11 @@ Library xmlutils
            CErrors, Richpp, Serialize,
            Xmlprotocol
   BuildDepends: unix, threads, yojson, str
+
+Library utils
+  Pack: true
+  Path: src/utils
+  BuildTools: ocamlbuild
+  FindlibName: utils
+  CompiledObject: best
+  Modules: Options

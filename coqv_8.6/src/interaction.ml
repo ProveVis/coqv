@@ -91,13 +91,13 @@ and response_goals msg =
             match !Coqv_utils.current_cmd_type with
             | Qed -> 
                 Proof_model.change_current_proof_state Defined;
-                current_session_id := "";
-                History.record_step !Doc_model.current_stateid Dummy
+                current_session_id := ""
+                (* History.record_step !Doc_model.current_stateid Dummy *)
             | Admitted ->
                 let chosen_node = select_chosen_node () in
                 begin match chosen_node with
                 | None -> ()
-                | Some cnode -> Callbacks.on_change_node_state cnode Admitted
+                | Some cnode -> Callbacks.on_change_node_state cnode.id Admitted
                 end;
                 print_endline "current proof tree is admitted";
                 Proof_model.change_current_proof_state Declared;
@@ -441,8 +441,14 @@ let interpret_cmd cmd_str_list =
         | cmd :: options -> 
         begin
             match cmd with
+            | "node" -> 
+                begin try
+                    print_endline (str_node (Proof_model.get_node (List.hd options)))
+                with
+                    Not_in_session -> print_endline ("node not found!")
+                end
             | "status" -> print_endline (Status.str_status ())
-            | "history" -> print_endline (History.str_history ())
+            (* | "history" -> print_endline (History.str_history ()) *)
             | "proof" -> 
                 if options = [] then
                     begin

@@ -27,7 +27,7 @@ let worker cin =
         end;
         (* print_endline ("there are "^(string_of_int (List.length !batch_commands))^" commands wait to send to coqtop"); *)
         if Doc_model.is_processed () && !Doc_model.goal_responsed then begin
-            (* print_endline ("coqtop processed "^(string_of_int !Doc_model.processed_stateid)); *)
+            (* print_endline ("coqtop processed "); *)
             if !Flags.batch_mode = false || (!batch_commands = []) then begin
                 Flags.batch_mode := false;
                 Flags.running_coqv := true;

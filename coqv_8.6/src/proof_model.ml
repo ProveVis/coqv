@@ -115,7 +115,7 @@ let is_children_admitted proof_tree nodeid =
     end else 
         true
 
-let change_node_state nid state = 
+(* let change_node_state nid state = 
     let proof_tree = current_proof_tree () in
     let node = Hashtbl.find proof_tree.nodes nid in
     (*printf "changing node %s to state %s\n" nid (str_node_state state);*)
@@ -130,7 +130,7 @@ let change_node_state nid state =
         if other_node.id <> other_node.parent.id then
             change_others other_node.parent in
     if node.id <> node.parent.id then (*exclude root*)
-        change_others node.parent
+        change_others node.parent *)
 
 let remove_node nid = 
     let proof_tree = current_proof_tree () in
@@ -161,6 +161,7 @@ let print_label node =
 
 
 let add_edge from_node to_node tatic = 
+    print_endline ("adding edge: "^from_node.id^"-->"^to_node.id);
     let proof_tree = current_proof_tree () in
     if from_node.id = to_node.id then ();
     if Hashtbl.mem proof_tree.nodes from_node.id then begin

@@ -1,11 +1,10 @@
-open Types
+(* open Types
 open Runtime
 
 
 type step = 
       Change_state of string * node_state
     | Add_node of string
-    (* | Change_label of string *)
     | Dummy
 
 type history = (Stateid.t * (step list)) list
@@ -45,4 +44,4 @@ let str_history () = begin
         | None -> "No History"
         | Some docc -> Doc_model.str_doc_built docc
     end^
-    ("\n\ncurrent_stateid: "^(string_of_int !Doc_model.current_stateid))
+    ("\n\ncurrent_stateid: "^(string_of_int !Doc_model.current_stateid)) *)

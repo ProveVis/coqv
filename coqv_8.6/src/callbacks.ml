@@ -17,7 +17,7 @@ let on_new_session (session: session) =
     add_session_to_modul (List.hd !moduls) session;
     (*printf "%d moduls at the moment\n" (List.length !moduls);*)
     let node = session.proof_tree.root in
-    History.record_step !Doc_model.current_stateid (Add_node node.id);
+    (* History.record_step !Doc_model.current_stateid (Add_node node.id); *)
     begin
         match !Communicate.vagent with
         | None -> (*print_endline "no vmdv agent currently"*)()
@@ -26,10 +26,53 @@ let on_new_session (session: session) =
             Communicate.add_node vagt session.name node
     end
 
-let on_change_node_state (node:node) state = 
+let rec change_one_node_state (node:node) state = 
     if node.state <> state then begin
+        print_endline ("change state of ndoe "^node.id^" to "^(str_node_state state));
+        node.state <- state;
+        Options.action (fun vagt -> 
+            let sid = !Proof_model.current_session_id in
+            if sid <> "" then Communicate.change_node_state vagt sid node.id state
+            ) !Communicate.vagent;
+        print_endline ("changed state of ndoe "^node.id);
+        true
+    end else
+        false
+and update_parent_node_state (node:node) = 
+    
+    let parent = node.parent in
+    let prooftree = current_proof_tree () in
+    print_endline ("updating parent of "^node.id^": "^parent.id);
+    if parent.id <> node.id then begin
+        
+        if is_children_proved prooftree parent.id then begin
+            if change_one_node_state parent Proved then
+                update_parent_node_state parent
+        end else if is_children_admitted prooftree parent.id then begin
+            if change_one_node_state parent Admitted then
+                update_parent_node_state parent
+        end else begin
+            if change_one_node_state parent Not_proved then
+                update_parent_node_state parent
+        end
+    end 
+    (* else begin
+        if is_children_proved prooftree parent.id then begin
+            ignore (change_one_node_state parent Proved)
+        end else if is_children_admitted prooftree parent.id then begin
+            ignore (change_one_node_state parent Admitted)
+        end else begin
+            ignore (change_one_node_state parent Not_proved)
+        end
+    end *)
+
+let on_change_node_state nid state = 
+    let node = get_node nid in
+    if change_one_node_state node state then
+        update_parent_node_state node
+    (* if node.state <> state then begin
         History.record_step !Doc_model.current_stateid (Change_state (node.id, node.state));
-        change_node_state node.id state;
+        change_one_node_state node state;
         begin
             match !Communicate.vagent with
             | None -> (*print_endline "no vmdv agent currently"*)()
@@ -39,7 +82,7 @@ let on_change_node_state (node:node) state =
                     Communicate.change_node_state vagt sid node.id state
                 end
         end
-    end
+    end *)
 
 let on_change_node_label (node:node) new_label tactic = 
     set_new_label node.id new_label tactic
@@ -47,7 +90,7 @@ let on_change_node_label (node:node) new_label tactic =
 let on_add_node node_from node_to state = 
     let label = Doc_model.uncommitted_command () in
     add_edge node_from node_to [label];
-    History.record_step !Doc_model.current_stateid (Add_node node_to.id);
+    (* History.record_step !Doc_model.current_stateid (Add_node node_to.id); *)
     node_to.state <- state;
     begin
         match !Communicate.vagent with
@@ -77,17 +120,17 @@ let add_new_goals cmd_type goals =
         if List.length new_nodes = 0 then begin
             print_endline "No more goals.";
             if cmd_type = Admit then
-                on_change_node_state cnode Admitted
+                on_change_node_state cnode.id Admitted
             else
-                on_change_node_state cnode Proved;
+                on_change_node_state cnode.id Proved;
             add_tactic cnode.id (Doc_model.uncommitted_command ())
         end else begin
             begin match cmd_type with
             | Focus _ ->
-                on_change_node_state cnode To_be_chosen;
+                on_change_node_state cnode.id To_be_chosen;
                 add_tactic cnode.id (Doc_model.uncommitted_command ())
             | Admit -> 
-                on_change_node_state cnode Admitted;
+                on_change_node_state cnode.id Admitted;
                 add_tactic cnode.id (Doc_model.uncommitted_command ())
             | Other -> 
                 let has_new = List.fold_left (fun b n -> 
@@ -97,20 +140,20 @@ let add_new_goals cmd_type goals =
                     not (node_exists n.id) 
                 ) false new_nodes in
                 if not has_new then begin
-                    on_change_node_state cnode Proved;
+                    on_change_node_state cnode.id Proved;
                     add_tactic cnode.id (Doc_model.uncommitted_command ())
                 end
             | _ -> ()
             end;
             List.iter (fun n ->
                 if node_exists n.id then
-                    on_change_node_state (get_node n.id) To_be_chosen
+                    on_change_node_state (n.id) To_be_chosen
                 else begin
                     on_add_node cnode n To_be_chosen;
-                    on_change_node_state cnode Not_proved
+                    on_change_node_state cnode.id Not_proved
                 end         
             ) new_nodes;
-            on_change_node_state (List.hd new_nodes) Chosen
+            on_change_node_state (List.hd new_nodes).id Chosen
         end)               
 
 
@@ -137,8 +180,8 @@ let on_receive_goals cmd_type goals =
         | Proof -> ()
         | Qed -> 
             Proof_model.change_current_proof_state Defined;
-            current_session_id := "";
-            History.record_step !Doc_model.current_stateid Dummy
+            current_session_id := ""
+            (* History.record_step !Doc_model.current_stateid Dummy *)
         | Admitted ->
             print_endline "current proof tree is admitted";
             Proof_model.change_current_proof_state Declared;

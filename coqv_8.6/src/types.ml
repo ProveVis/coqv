@@ -55,7 +55,7 @@ type step = tactic * node * (node list)
 type children = tactic * (string list)
 
 let str_node n = 
-    "Node "^n.id^"("^(str_node_state n.state)^"): \n"^(str_label n.label)^"\n"
+    "Node "^n.id^"{\n\tstate: "^(str_node_state n.state)^";\n\tlabel: "^(str_label n.label)^";\n\tparent: "^(n.parent.id)^";\n\tstateid: "^(string_of_int (n.stateid))^";\n}"
 
 type proof_tree = {
     mutable root : node;
