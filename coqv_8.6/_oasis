@@ -5,12 +5,12 @@ Synopsis:    This tool is intended to be a middleware for the communications of 
 Authors:     Jian LIU <liujian@ios.ac.cn>
 License:     LGPL-3.0 with OCaml linking exception
 Plugins:     DevFiles (0.4)
-PostBuildCommand: mv repl.native coqv
+PostBuildCommand: mv repl.byte coqv
 Executable coqv
   Path:       src
   BuildTools: ocamlbuild
   MainIs:     repl.ml
-  CompiledObject: best
+  CompiledObject: byte
   Install: false
   BuildDepends: xmllib, utils, unix, threads, yojson, str
 
@@ -20,7 +20,7 @@ Library xmllib
   Path:       src/xmllib
   BuildTools: ocamlbuild
   FindlibName: xmllib
-  CompiledObject: best
+  CompiledObject: byte
   Modules: Xml_datatype, Xml_lexer, Xml_parser,
            Xml_printer, CSig, Store, Exninfo,
            Loc, Stateid, Util, Feedback,
@@ -35,5 +35,5 @@ Library utils
   Path: src/utils
   BuildTools: ocamlbuild
   FindlibName: utils
-  CompiledObject: best
+  CompiledObject: byte
   Modules: Options

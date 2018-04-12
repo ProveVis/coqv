@@ -87,25 +87,33 @@ and response_goals msg =
     begin
     match msg with
     | Good None -> 
+        (* on_receive_goals !Coqv_utils.current_cmd_type ({
+            fg_goals = [];
+            bg_goals = [];
+            shelved_goals = [];
+            given_up_goals = [];
+          }:Interface.goal Interface.pre_goals);
+        Doc_model.commit () *)
         begin
             match !Coqv_utils.current_cmd_type with
-            | Qed -> 
-                Proof_model.change_current_proof_state Defined;
+            | ProofHandling ["Qed"] -> 
+                Callbacks.on_change_proof_state Defined;
                 current_session_id := ""
                 (* History.record_step !Doc_model.current_stateid Dummy *)
-            | Admitted ->
-                let chosen_node = select_chosen_node () in
+            | ProofHandling ["Admitted"] ->
+                (* let chosen_node = select_chosen_node () in
                 begin match chosen_node with
                 | None -> ()
                 | Some cnode -> Callbacks.on_change_node_state cnode.id Admitted
-                end;
+                end; *)
                 print_endline "current proof tree is admitted";
-                Proof_model.change_current_proof_state Declared;
+                Callbacks.on_change_proof_state Declared;
                 current_session_id := ""
-            | _ -> ()
+            | cmd -> print_endline ("Don't know what to do when receiving \"Good None\" in respose_goals with cmd type: "^(str_cmd_type cmd))
         end;
         Doc_model.commit ()
     | Good (Some goals) -> 
+        print_endline ("have received some goals after "^(str_cmd_type !Coqv_utils.current_cmd_type));
         on_receive_goals !Coqv_utils.current_cmd_type goals;
         Doc_model.commit ()
     | Fail (id,loc, msg) -> 
@@ -160,6 +168,8 @@ and response_add msg old_stateid cmd =
     flush coq_channels.cout
 
 and request_edit_at stateid = 
+    Coqv_utils.current_cmd_type := ProofHandling ["Editat"];
+    Doc_model.goal_responsed := false;
     let cout = Runtime.coq_channels.cout in
     request_mode := Request_edit_at stateid;
     let editat = Xmlprotocol.edit_at stateid in
@@ -168,16 +178,19 @@ and request_edit_at stateid =
     log_coqtop true (Xml_printer.to_string xml_editat)
 
 and response_edit_at msg stateid =
+    let editat_success = ref false in
     begin
         match msg with
         | Good (CSig.Inl ()) ->
             printf "simple backtract;\n";
             flush stdout;
-            on_edit_at stateid
+            on_edit_at stateid;
+            editat_success := true
         | Good (CSig.Inr (focusedStateId, (focusedQedStateId, oldFocusedStateId))) ->
             printf "focusedStateId: %d, focusedQedStateId: %d, oldFocusedStateId: %d\n" focusedStateId focusedQedStateId oldFocusedStateId;
             flush stdout;
-            on_edit_at stateid
+            on_edit_at stateid;
+            editat_success := true
         | Fail (errorFreeStateId, loc, xml_content) ->
             printf "errorFreeStateId: %d, message content: " errorFreeStateId;
             print_xml stdout xml_content;
@@ -186,6 +199,10 @@ and response_edit_at msg stateid =
             request_edit_at errorFreeStateId
     end;
     (*request_goals (); (*fetch goals after edit at some new stateid*)*)
+    if !editat_success then
+        request_goals ()
+    else
+        Doc_model.goal_responsed := true;
     flush coq_channels.cout
 
 and request_query query stateid = 
@@ -441,6 +458,7 @@ let interpret_cmd cmd_str_list =
         | cmd :: options -> 
         begin
             match cmd with
+            | "stateid" -> print_endline ("current stateid: "^(string_of_int (!Doc_model.current_stateid)))
             | "node" -> 
                 begin try
                     print_endline (str_node (Proof_model.get_node (List.hd options)))

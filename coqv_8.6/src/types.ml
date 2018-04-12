@@ -10,12 +10,13 @@ let str_proof_kind pk =
     | Fact -> "Fact"
     | Goal -> "Goal"
 
-type proof_state = Proving | Defined | Declared
+type proof_state = Proving | Defined | Declared | Aborted
 let str_proof_state ps = 
     match ps with
     | Proving -> "Proving"      (*proposition is under proof*)
     | Defined -> "Defined"      (*proof was closed by "Qed."*)
     | Declared -> "Declared"    (*proof was closed by "Admitted."*)
+    | Aborted -> "Aborted"      (*proof was closed by "Abort"*)
 
 type node_state = Not_proved | Proved | Admitted | To_be_chosen | Chosen
 let str_node_state ns =
@@ -45,7 +46,7 @@ type node = {
     mutable label: label;
     mutable state: node_state;
     mutable parent: node;
-    mutable stateid: int;
+    mutable stateid: int; (*stateid when this node is chosen in a proof*)
 }
 
 type tactic = string list

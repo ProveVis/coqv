@@ -41,29 +41,31 @@ let caught_str str =
     Str.global_replace (Str.regexp " : ") ": "
 
 type cmd_type = 
-    Module of string
+    | Module of string
     | End of string
     | Proposition of string * proof_kind
-    | Proof
+    | ProofHandling of (string list)
+    (* | Proof
     | Qed
     | Admitted
     | Focus of int
-    | Admit
+    | Admit *)
+    | Tactic of (string list)
     | Require
-    (* | Edit_label *)
-    | Other
+    | Other of (string list)
+    (* | Other *)
 
-let current_cmd_type = ref Other
+let current_cmd_type = ref Require
 
 let get_cmd_type cmd =
     let tcmd = String.trim cmd in
     let splited = Str.split (Str.regexp "[ \t<:\\.]+") tcmd in
     match List.map (fun s -> String.trim s) splited with
     | [] -> print_endline ("empty command: "^cmd); exit 1
-    | "Module" :: tl_split -> 
+    | "Module" :: tl_split as cmd -> 
         if List.hd (List.tl splited) <> "Type" then
             Module (List.hd tl_split)
-        else Other
+        else (Other cmd)
     | "End" :: tl_split -> End (List.hd tl_split)
     | "Theorem" :: tl_split -> Proposition (List.hd tl_split, Theorem)
     | "Lemma" :: tl_split -> Proposition (List.hd tl_split, Lemma)
@@ -72,9 +74,10 @@ let get_cmd_type cmd =
     | "Remark" :: tl_split -> Proposition (List.hd tl_split, Remark)
     | "Fact" :: tl_split -> Proposition (List.hd tl_split, Fact)
     | "Goal" :: tl_split -> Proposition ("Unnamed_thm", Goal)
-    | "Proof" :: tl_split -> Proof
-    | "Qed" :: tl_split -> Qed
-    | "Focus" :: tl_split -> Focus (int_of_string (List.hd tl_split))
+    | "Proof" :: tl_split -> ProofHandling ["Proof"]
+    | "Qed" :: tl_split -> ProofHandling ["Qed"]
+    | "Undo" :: tl_split as cmd -> ProofHandling cmd
+    | "Focus" :: tl_split as focus_cmd -> ProofHandling focus_cmd
     | "Require" :: tl_split -> Require
     (* | "move" :: tl_split -> Edit_label
     | "rename" :: tl_split -> Edit_label
@@ -83,24 +86,27 @@ let get_cmd_type cmd =
     | "pose" :: tl_split -> Edit_label
     | "clear" :: tl_split -> Edit_label
     | "clearbody" :: tl_split -> Edit_label *)
-    | "Admitted" :: tl_split -> Admitted
-    | "admit" :: tl_split -> Admit
-    | "give_up" :: tl_split -> Admit
-    | _ -> Other
+    | "Admitted" :: tl_split -> ProofHandling ["Admitted"]
+    | "admit" :: tl_split -> Tactic ["Admit"]
+    | "give_up" :: tl_split -> Tactic ["Admit"]
+    | _ as cmd -> Tactic cmd
 
 let str_cmd_type ct = 
     match ct with
     | Module mname -> "Module "^mname
     | End mname -> "End "^mname
     | Proposition (thm_name, pk) -> "Proposition "^(str_proof_kind pk)^" "^thm_name
-    | Proof -> "Proof"
+    | ProofHandling cmd -> "ProofHandling"^(List.fold_left (fun str c -> str^" "^c) "" cmd)
+    | Tactic cmd -> "Tactic"^(List.fold_left (fun str c -> str^" "^c) "" cmd)
+    | Require -> "Require"
+    | Other cmd -> "Other"^(List.fold_left (fun str c -> str^" "^c) "" cmd)
+    (* | Proof -> "Proof"
     | Qed -> "Qed"
     | Admitted -> "Admitted"
     | Focus _ -> "Focus"
     | Admit -> "Admit"
     | Require -> "Require"
-    (* | Edit_label -> "Edit_label" *)
-    | Other -> "Other"
+    | Other -> "Other" *)
 
 let rec richpp_to_string richpp = 
     Richpp.raw_print richpp

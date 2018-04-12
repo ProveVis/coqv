@@ -10,6 +10,7 @@ type message =
     | Add_edge of string * string * string * string
     | Remove_edge of string * string * string
     | Change_node_state of string * string * node_state
+    | Change_proof_state of string * proof_state
     | Highlight_node of string * string
     | Unhighlight_node of string * string
     | Clear_color of string
@@ -71,6 +72,12 @@ let json_of_msg (msg:message) =
             ("node_id", `String nid);
             ("new_state", `String (str_node_state new_state))
         ]
+    | Change_proof_state (sid, pstate) ->
+        `Assoc [
+            ("type", `String "change_proof_state");
+            ("session_id", `String sid);
+            ("new_state", `String (str_proof_state pstate))
+        ]
     | Highlight_node (sid, nid) ->
         `Assoc [
             ("type", `String "highlight_node");
@@ -102,24 +109,6 @@ let json_of_msg (msg:message) =
             ("error_msg", `String error_msg)
         ]
 
-
-
-(* let rec get_json_of_key key str_json_list = 
-    match str_json_list with
-    | (str, json) :: str_json_list' -> 
-        if str = key then
-            json
-        else 
-            get_json_of_key key str_json_list'
-    | [] -> printf "not find json for key %s\n" key; exit 1  *)
-(* 
-let get_json_of_key key json = Yojson.Basic.Util.member key json 
-
-
-let get_string_of_json json = 
-    match json with
-    | `String str -> str
-    | _ -> printf "%s is not a string\n" (Yojson.Basic.to_string json); exit 1 *)
 
 let str_value_of_json key json = 
     Yojson.Basic.Util.to_string (Yojson.Basic.Util.member key json)

@@ -79,7 +79,9 @@ let add_node node nodeid proof_tree =
 
 
 let children node proof_tree = 
-    Hashtbl.find proof_tree.edges node
+    try
+        (Hashtbl.find proof_tree.edges node)
+    with Not_found -> [],[]
 
 let hide node = 
     printf "hiding node %s\n" node.id; 
@@ -133,17 +135,37 @@ let is_children_admitted proof_tree nodeid =
         change_others node.parent *)
 
 let remove_node nid = 
+    print_endline ("removing node "^nid);
     let proof_tree = current_proof_tree () in
-    assert (nid <> proof_tree.root.id);
-    let tmp_node_queue = Queue.create () in
-    Queue.push proof_tree.root tmp_node_queue;
-    while not (Queue.is_empty tmp_node_queue) do
-        let node = Queue.pop tmp_node_queue in
-        Hashtbl.remove proof_tree.nodes node.id;
-        let _, children_id = Hashtbl.find proof_tree.edges nid in
-        List.iter (fun cid -> Queue.push (Hashtbl.find proof_tree.nodes cid) tmp_node_queue) children_id;
-        Hashtbl.remove proof_tree.edges node.id
-    done
+    (* assert (nid <> proof_tree.root.id); *)
+    if nid = proof_tree.root.id then
+        false
+    else begin
+        let tmp_node_queue = Queue.create () in
+        Queue.push nid tmp_node_queue;
+        while not (Queue.is_empty tmp_node_queue) do
+            let nodeid = Queue.pop tmp_node_queue in
+            let _,children_id = children nodeid proof_tree in
+            List.iter (fun cid -> Queue.push (cid) tmp_node_queue) children_id;
+            let parent = (get_node nodeid).parent in
+            Hashtbl.remove proof_tree.nodes nodeid;
+            Hashtbl.remove proof_tree.edges nodeid;
+            let tactics,parent_children = children parent.id proof_tree in
+            let new_parent_children = List.filter (fun nid -> nid <> nodeid) parent_children in
+            if new_parent_children = [] then
+                Hashtbl.remove proof_tree.edges parent.id
+            else
+                Hashtbl.replace proof_tree.edges parent.id (tactics,new_parent_children)
+        done;
+        true
+    end
+
+(* let remove_children nid = 
+    let proof_tree = current_proof_tree () in
+    let _, children_id = Hashtbl.find proof_tree.edges nid in
+    let removed_ids = ref [] in
+    List.iter (fun cid -> if remove_node cid then removed_ids := cid::!removed_ids else ()) children_id;
+    !removed_ids *)
 
 let set_new_label nid new_label tactic = 
     let proof_tree = current_proof_tree () in
@@ -218,9 +240,17 @@ let find_session sn_path =
 
 let change_current_proof_state pstate = 
     match !current_session_id with
-    | "" -> print_endline "Not proving propositions"
+    | "" -> 
+        print_endline "Not proving propositions"; 
+        false
     | sid -> 
         try
             let session = Hashtbl.find ((List.hd !moduls).sessions) sid in
-            session.state <- pstate
-        with Not_found -> print_endline ("Could not find "^sid)
+            if session.state <> pstate then begin
+                session.state <- pstate;
+                true
+            end else 
+                false
+        with Not_found -> 
+            print_endline ("Could not find "^sid); 
+            false

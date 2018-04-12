@@ -9,6 +9,8 @@ open History
 let focused_goalid = ref 0
 let last_goalid_list = ref [] *)
 
+let in_focus_mode = ref false 
+
 let on_new_session (session: session) = 
     current_session_id := session.name;
     (* printf "current session id: %s\n" session.name; *)
@@ -39,7 +41,6 @@ let rec change_one_node_state (node:node) state =
     end else
         false
 and update_parent_node_state (node:node) = 
-    
     let parent = node.parent in
     let prooftree = current_proof_tree () in
     print_endline ("updating parent of "^node.id^": "^parent.id);
@@ -68,9 +69,12 @@ and update_parent_node_state (node:node) =
 
 let on_change_node_state nid state = 
     let node = get_node nid in
-    if change_one_node_state node state then
+    if change_one_node_state node state then begin
+        if node.state = Chosen then
+            node.stateid <- !Doc_model.current_stateid;
         update_parent_node_state node
-    (* if node.state <> state then begin
+    end
+        (* if node.state <> state then begin
         History.record_step !Doc_model.current_stateid (Change_state (node.id, node.state));
         change_one_node_state node state;
         begin
@@ -103,7 +107,24 @@ let on_add_node node_from node_to state =
             end
     end
 
-let add_new_goals cmd_type goals =     
+let on_remove_node nid =
+    if remove_node nid then begin
+        Options.action (fun vagt ->
+            let sid = !Proof_model.current_session_id in
+            if sid <> "" then Communicate.remove_node vagt sid nid
+        ) !Communicate.vagent
+    end
+
+let on_change_proof_state pstate = 
+    if Proof_model.change_current_proof_state pstate then begin
+        Options.action (fun vagt -> 
+            let sid = !Proof_model.current_session_id in
+            if sid <> "" then Communicate.change_proof_state vagt sid pstate
+            ) !Communicate.vagent;
+        print_endline ("changed the state of the proof of "^(!current_session_id)^" to "^(str_proof_state pstate))
+    end
+
+let add_new_goals cmd goals =     
     let fg_goals = goals.fg_goals in
     let chosen_node = select_chosen_node () in
     (match chosen_node with
@@ -115,24 +136,24 @@ let add_new_goals cmd_type goals =
             label = goal_to_label g;
             state = To_be_chosen;
             parent = cnode;
-            stateid = !Doc_model.current_stateid;
+            stateid = (*!Doc_model.current_stateid*)-1;
         }) fg_goals in
         if List.length new_nodes = 0 then begin
             print_endline "No more goals.";
-            if cmd_type = Admit then
+            if cmd = ["Admit"] then
                 on_change_node_state cnode.id Admitted
             else
                 on_change_node_state cnode.id Proved;
             add_tactic cnode.id (Doc_model.uncommitted_command ())
         end else begin
-            begin match cmd_type with
-            | Focus _ ->
+            begin match cmd with
+            (* | Focus _ ->
                 on_change_node_state cnode.id To_be_chosen;
-                add_tactic cnode.id (Doc_model.uncommitted_command ())
-            | Admit -> 
+                add_tactic cnode.id (Doc_model.uncommitted_command ()) *)
+            | ["Admit"] -> 
                 on_change_node_state cnode.id Admitted;
                 add_tactic cnode.id (Doc_model.uncommitted_command ())
-            | Other -> 
+            | _ -> 
                 let has_new = List.fold_left (fun b n -> 
                 if b then 
                     b 
@@ -143,7 +164,7 @@ let add_new_goals cmd_type goals =
                     on_change_node_state cnode.id Proved;
                     add_tactic cnode.id (Doc_model.uncommitted_command ())
                 end
-            | _ -> ()
+            (* | _ -> () *)
             end;
             List.iter (fun n ->
                 if node_exists n.id then
@@ -156,6 +177,48 @@ let add_new_goals cmd_type goals =
             on_change_node_state (List.hd new_nodes).id Chosen
         end)               
 
+let handle_proof cmd goals = 
+    match cmd with
+    | ["Proof"] -> ()
+    | ["Qed"] -> 
+        on_change_proof_state Defined;
+        current_session_id := ""
+    | ["Admitted"] -> 
+        print_endline "current proof tree is admitted";
+        on_change_proof_state Declared;
+        current_session_id := ""
+    | "Abort" :: _ -> 
+        print_endline "current proof tree is aborted";
+        on_change_proof_state Aborted;
+        current_session_id := ""
+    | "Undo" :: _ | "Restart" :: _ | ["Editat"] -> 
+        let fg_goals = goals.fg_goals in
+        let nids = List.map (fun g -> g.goal_id) fg_goals in
+        let removed_ids = ref [] in
+        List.iter (fun nid -> removed_ids := (snd (children (nid) (current_proof_tree ()))) @ !removed_ids) nids;
+        (* print_endline ("Preparing to remove "^(string_of_int (List.length !removed_ids))^" nodes"); *)
+        List.iter (fun nid -> on_remove_node nid) !removed_ids;
+        if nids <> [] then begin
+            on_change_node_state (List.hd nids) Chosen;
+            List.iter (fun nid -> on_change_node_state nid To_be_chosen) (List.tl nids)
+        end
+    | "Focus" :: _ | "Unfocus" :: _ -> 
+        let fg_goals = goals.fg_goals in
+        let nids = List.map (fun g -> g.goal_id) fg_goals in begin
+        match select_chosen_node () with
+        | None -> print_endline ("No focused node right now")
+        | Some cnode -> 
+            if nids <> [] then begin
+                on_change_node_state cnode.id To_be_chosen;
+                on_change_node_state (List.hd nids) Chosen;
+                List.iter (fun nid -> on_change_node_state nid To_be_chosen) (List.tl nids)
+            end
+        end
+    | _ -> 
+        print_string "Unkown proof handling command: "; 
+        List.iter (fun c -> print_string (c^" ")) cmd; 
+        print_endline ""
+    
 
 let on_receive_goals cmd_type goals = 
     (*printf "focused goals number: %d. \n" (List.length (goals.fg_goals));*)
@@ -176,18 +239,22 @@ let on_receive_goals cmd_type goals =
             } in
             let proof_tree = new_proof_tree node in
             let session = new_session thm_name kind Proving proof_tree in
-            on_new_session session
-        | Proof -> ()
+            on_new_session session;
+            print_endline ("created new session "^thm_name)
+        | ProofHandling cmd -> handle_proof cmd goals
+        | Tactic cmd -> add_new_goals cmd goals
+        | Require -> ()
+        | Other cmd -> 
+            print_endline ("Unknown type of command: "^(str_cmd_type cmd_type))
+        (* | Proof -> ()
         | Qed -> 
             Proof_model.change_current_proof_state Defined;
             current_session_id := ""
-            (* History.record_step !Doc_model.current_stateid Dummy *)
         | Admitted ->
             print_endline "current proof tree is admitted";
             Proof_model.change_current_proof_state Declared;
             current_session_id := ""
-        | Focus _  | Admit | Other -> add_new_goals cmd_type goals
-        | Require -> ()
+        | Focus _  | Admit | Other -> add_new_goals cmd_type goals *)
     end
             
 

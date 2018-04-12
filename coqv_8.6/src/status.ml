@@ -38,9 +38,9 @@ let str_proof_tree sn_path =
         Queue.push proof_tree.root.id node_queue;
         while not (Queue.is_empty node_queue) do
             let current_node = Queue.pop node_queue in
-            str_buf := !str_buf ^ current_node;
+            str_buf := !str_buf ^ "id: "^current_node;
             let node = Proof_model.select_node current_node proof_tree in
-            str_buf := (!str_buf) ^" ("^(str_node_state node.state)^")\n"^ (Types.str_label node.label);
+            str_buf := (!str_buf) ^", stateid: "^(string_of_int node.stateid)^" ("^(str_node_state node.state)^")\n"^ (Types.str_label node.label);
             try 
                 let cmd, clist = Proof_model.children current_node proof_tree in
                 str_buf := !str_buf ^ "(" ^ (str_tactics cmd) ^ ")\t[";
