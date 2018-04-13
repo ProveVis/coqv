@@ -77,7 +77,12 @@ let get_cmd_type cmd =
     | "Proof" :: tl_split -> ProofHandling ["Proof"]
     | "Qed" :: tl_split -> ProofHandling ["Qed"]
     | "Undo" :: tl_split as cmd -> ProofHandling cmd
+    | "Restart" :: tl_split as cmd -> ProofHandling cmd
     | "Focus" :: tl_split as focus_cmd -> ProofHandling focus_cmd
+    | "Unfocus" :: tl_split as cmd -> ProofHandling cmd
+    | "Show" :: tl_split as cmd -> ProofHandling cmd
+    | "Guarded" :: tl_split as cmd -> ProofHandling cmd
+    | "Optimize" :: tl_split as cmd -> ProofHandling cmd
     | "Require" :: tl_split -> Require
     (* | "move" :: tl_split -> Edit_label
     | "rename" :: tl_split -> Edit_label

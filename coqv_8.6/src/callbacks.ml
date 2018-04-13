@@ -57,15 +57,6 @@ and update_parent_node_state (node:node) =
                 update_parent_node_state parent
         end
     end 
-    (* else begin
-        if is_children_proved prooftree parent.id then begin
-            ignore (change_one_node_state parent Proved)
-        end else if is_children_admitted prooftree parent.id then begin
-            ignore (change_one_node_state parent Admitted)
-        end else begin
-            ignore (change_one_node_state parent Not_proved)
-        end
-    end *)
 
 let on_change_node_state nid state = 
     let node = get_node nid in
@@ -74,19 +65,6 @@ let on_change_node_state nid state =
             node.stateid <- !Doc_model.current_stateid;
         update_parent_node_state node
     end
-        (* if node.state <> state then begin
-        History.record_step !Doc_model.current_stateid (Change_state (node.id, node.state));
-        change_one_node_state node state;
-        begin
-            match !Communicate.vagent with
-            | None -> (*print_endline "no vmdv agent currently"*)()
-            | Some vagt ->
-                let sid = !Proof_model.current_session_id in
-                if sid <> "" then begin
-                    Communicate.change_node_state vagt sid node.id state
-                end
-        end
-    end *)
 
 let on_change_node_label (node:node) new_label tactic = 
     set_new_label node.id new_label tactic
@@ -96,6 +74,8 @@ let on_add_node node_from node_to state =
     add_edge node_from node_to [label];
     (* History.record_step !Doc_model.current_stateid (Add_node node_to.id); *)
     node_to.state <- state;
+    if state = Chosen then
+            node_to.stateid <- !Doc_model.current_stateid;
     begin
         match !Communicate.vagent with
         | None -> (*print_endline "no vmdv agent currently"*)()
@@ -160,7 +140,7 @@ let add_new_goals cmd goals =
                 else
                     not (node_exists n.id) 
                 ) false new_nodes in
-                if not has_new then begin
+                if (not has_new) && (not (List.mem cnode.id (List.map (fun n -> n.id) new_nodes))) then begin
                     on_change_node_state cnode.id Proved;
                     add_tactic cnode.id (Doc_model.uncommitted_command ())
                 end
@@ -173,8 +153,14 @@ let add_new_goals cmd goals =
                     on_add_node cnode n To_be_chosen;
                     on_change_node_state cnode.id Not_proved
                 end         
-            ) new_nodes;
-            on_change_node_state (List.hd new_nodes).id Chosen
+            ) (List.tl new_nodes);
+            let new_focused_node = List.hd new_nodes in
+            if node_exists new_focused_node.id then
+                on_change_node_state new_focused_node.id Chosen
+            else begin
+                on_add_node cnode new_focused_node Chosen;
+                on_change_node_state cnode.id Not_proved
+            end
         end)               
 
 let handle_proof cmd goals = 
@@ -215,7 +201,7 @@ let handle_proof cmd goals =
             end
         end
     | _ -> 
-        print_string "Unkown proof handling command: "; 
+        print_string "Unimplemented proof handling command: "; 
         List.iter (fun c -> print_string (c^" ")) cmd; 
         print_endline ""
     
@@ -246,15 +232,6 @@ let on_receive_goals cmd_type goals =
         | Require -> ()
         | Other cmd -> 
             print_endline ("Unknown type of command: "^(str_cmd_type cmd_type))
-        (* | Proof -> ()
-        | Qed -> 
-            Proof_model.change_current_proof_state Defined;
-            current_session_id := ""
-        | Admitted ->
-            print_endline "current proof tree is admitted";
-            Proof_model.change_current_proof_state Declared;
-            current_session_id := ""
-        | Focus _  | Admit | Other -> add_new_goals cmd_type goals *)
     end
             
 
