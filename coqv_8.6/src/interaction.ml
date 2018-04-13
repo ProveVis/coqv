@@ -374,7 +374,7 @@ let interpret_feedback xml_fb =
         | Message (levl, loc, xml_content), State sid -> 
             (* if levl = Feedback.Error then
                 Doc_model.coqtop_processed sid; *)
-            ()(*printf "Message %s, stateid %d" (str_feedback_level levl) sid; print_xml stdout xml_content*)
+            (print_xml stdout xml_content; print_endline "")(*printf "Message %s, stateid %d" (str_feedback_level levl) sid; print_xml stdout xml_content*)
         | Message (levl, loc, xml_content), Edit eid -> ()(*printf "Message %s, editid %d" (str_feedback_level levl) eid; print_xml stdout xml_content*)
     end;
     (* printf "\n"; *)
