@@ -113,6 +113,14 @@ let str_cmd_type ct =
     | Require -> "Require"
     | Other -> "Other" *)
 
+type pending_task = Nothing | ChosingNode of string
+
+let str_pending_task = function
+    | Nothing -> "Nothing"
+    | ChosingNode nid -> "ChosingNode "^nid
+
+let current_pending_task = ref Nothing
+
 let rec richpp_to_string richpp = 
     Richpp.raw_print richpp
 

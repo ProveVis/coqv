@@ -98,16 +98,16 @@ let start_send_receive vagent =
     ignore (Thread.create (fun vagent -> receiving vagent) vagent);
     ignore (Thread.create (fun vagent -> sending vagent) vagent)
 
-    let get_visualize_agent ip_addr = 
-        let i,o = Unix.open_connection (Unix.ADDR_INET (Unix.inet_addr_of_string ip_addr, 3333)) in
-        let vagent: visualize_agent = {
-            input = i;
-            output = o;
-            is_alive = true;
-            sending_queue = Queue.create ();
-            sending_mutex = Mutex.create ();
-            sending_conditional = Condition.create ()
-        } in
-        start_send_receive vagent;
-        vagent
+let get_visualize_agent ip_addr = 
+    let i,o = Unix.open_connection (Unix.ADDR_INET (Unix.inet_addr_of_string ip_addr, 3333)) in
+    let vagent: visualize_agent = {
+        input = i;
+        output = o;
+        is_alive = true;
+        sending_queue = Queue.create ();
+        sending_mutex = Mutex.create ();
+        sending_conditional = Condition.create ()
+    } in
+    start_send_receive vagent;
+    vagent
     
