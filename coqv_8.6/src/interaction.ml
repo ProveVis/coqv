@@ -86,36 +86,9 @@ and request_goals () =
 and response_goals msg =
     begin
     match msg with
-    | Good None -> 
-        (* on_receive_goals !Coqv_utils.current_cmd_type ({
-            fg_goals = [];
-            bg_goals = [];
-            shelved_goals = [];
-            given_up_goals = [];
-          }:Interface.goal Interface.pre_goals);
-        Doc_model.commit () *)
-        begin
-            match !Coqv_utils.current_cmd_type with
-            | ProofHandling ["Qed"] -> 
-                Callbacks.on_change_proof_state Defined;
-                current_session_id := ""
-                (* History.record_step !Doc_model.current_stateid Dummy *)
-            | ProofHandling ["Admitted"] ->
-                (* let chosen_node = select_chosen_node () in
-                begin match chosen_node with
-                | None -> ()
-                | Some cnode -> Callbacks.on_change_node_state cnode.id Admitted
-                end; *)
-                print_endline "current proof tree is admitted";
-                Callbacks.on_change_proof_state Declared;
-                current_session_id := ""
-            | cmd -> print_endline ("Don't know what to do when receiving \"Good None\" in respose_goals with cmd type: "^(str_cmd_type cmd))
-        end;
-        Doc_model.commit ()
-    | Good (Some goals) -> 
-        print_endline ("have received some goals after "^(str_cmd_type !Coqv_utils.current_cmd_type));
-        on_receive_goals !Coqv_utils.current_cmd_type goals;
-        Doc_model.commit ()
+    | Good ogoals -> 
+        Handle_io.add_pending_task (CoqtopGoals ogoals);
+    (* | Good (Some goals) ->  *)
     | Fail (id,loc, msg) -> 
         print_endline "fail to get goals";
         printf "Fail at stateid %d: %s\n" id (richpp_to_string msg);

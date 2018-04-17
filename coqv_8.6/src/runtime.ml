@@ -28,34 +28,6 @@ let running = ref true
 
 
 
-(* let current_coqtop_worker = ref "master" *)
-type debug_info = {
-    coqtop_log: out_channel;
-    vmdv_log: out_channel;
-}
-
-let logs: (debug_info option) ref = ref None
-
-let log_coqtop b str = 
-    match !logs with
-    | None -> ()
-    | Some lgs -> 
-        if b then
-            output_string lgs.coqtop_log ("COQV --> COQTOP\n"^str^"\n")
-        else
-            output_string lgs.coqtop_log ("COQTOP --> COQV\n"^str^"\n");
-        flush lgs.coqtop_log
-
-let log_vmdv b str = 
-    match !logs with
-    | None -> ()
-    | Some lgs ->
-        if b then
-            output_string lgs.vmdv_log ("COQV --> VMDV\n"^str^"\n")
-        else
-            output_string lgs.vmdv_log ("VMDV --> COQV\n"^str^"\n");
-        flush lgs.vmdv_log
-
 
 
 

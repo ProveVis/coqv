@@ -3,7 +3,7 @@ open Types
 open Runtime
 open Vmdv_protocol
 
-type visualize_agent =
+type vmdv_agent =
     {
         mutable input: in_channel;
         mutable output: out_channel;
@@ -13,13 +13,13 @@ type visualize_agent =
         sending_conditional: Condition.t;
     }
     
-let vagent : (visualize_agent option) ref = ref None
+let vagent : (vmdv_agent option) ref = ref None
 
-    
+(*     
 let log_if_possible str = 
     match !Runtime.logs with
     | None -> ()
-    | Some logs -> output_string logs.coqtop_log str; flush logs.coqtop_log
+    | Some logs -> output_string logs.coqtop_log str; flush logs.coqtop_log *)
 
 let wait_to_send vagent msg = 
     Mutex.lock vagent.sending_mutex;
@@ -58,7 +58,7 @@ let sending vagent =
             output_string cout ((Yojson.Basic.to_string json_msg)^"\n");
             flush cout;
 
-            log_if_possible ("Sent: "^(Yojson.Basic.to_string json_msg)^"\n")
+            Log.log_vmdv true ("Sent: "^(Yojson.Basic.to_string json_msg)^"\n")
         end
     done
 
@@ -89,7 +89,7 @@ let receiving vagent =
         let len = input cin buffer 0 !Flags.json_bufsize in
         let raw_str = Bytes.sub_string buffer 0 len in
         let json_msg = Yojson.Basic.from_string raw_str in
-        log_if_possible ("Received: "^(Yojson.Basic.to_string json_msg)^"\n");
+        Log.log_vmdv false ("Received: "^(Yojson.Basic.to_string json_msg)^"\n");
         let msg = msg_of_json json_msg in
         parse vagent msg
     done
@@ -98,7 +98,7 @@ let start_send_receive vagent =
     ignore (Thread.create (fun vagent -> receiving vagent) vagent);
     ignore (Thread.create (fun vagent -> sending vagent) vagent)
 
-let get_visualize_agent ip_addr = 
+let get_vmdv_agent ip_addr = 
     let i,o = Unix.open_connection (Unix.ADDR_INET (Unix.inet_addr_of_string ip_addr, 3333)) in
     let vagent: visualize_agent = {
         input = i;
@@ -110,4 +110,9 @@ let get_visualize_agent ip_addr =
     } in
     start_send_receive vagent;
     vagent
-    
+
+let init_vmdv_agent ip_addr = 
+    try
+        let vagent = get_vmdv_agent ip_addr in
+        vagent := Some vagent
+    with _ -> print_endline ("connect to vmdv in "^s^" failed.")

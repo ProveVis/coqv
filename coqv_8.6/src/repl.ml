@@ -9,37 +9,6 @@ let command_re = Str.regexp ":[-_A-Za-z0-9]+"
 let read_write_condition = Condition.create ()
 let read_write_mutex = Mutex.create ()
 
-let worker cin =     
-    let buffer = Bytes.create !Flags.xml_bufsize in
-    while !Runtime.running do
-        (* print_endline "wait for coqtop"; *)
-        let len = input cin buffer 0 !Flags.xml_bufsize in
-        (* print_endline ("coqtop responsed with length "^(string_of_int len)); *)
-        if len = 0 then
-            running := false
-        else begin
-            let output_str = Bytes.sub_string buffer 0 len in
-            (*printf "%s" (Str.global_replace (ignored_re ()) "" output_str);
-            flush stdout*)
-            if(len <> 0) then
-                handle_answer output_str;
-            flush stdout
-        end;
-        (* print_endline ("there are "^(string_of_int (List.length !batch_commands))^" commands wait to send to coqtop"); *)
-        if Doc_model.is_processed () && !Doc_model.goal_responsed then begin
-            (* print_endline ("coqtop processed "); *)
-            if !Flags.batch_mode = false || (!batch_commands = []) then begin
-                Flags.batch_mode := false;
-                Flags.running_coqv := true;
-                Condition.signal read_write_condition
-            end else begin
-                let bch, bct = List.hd !batch_commands, List.tl !batch_commands in
-                handle_input bch;
-                batch_commands := bct
-            end
-        end
-    done;
-    print_endline "worker quit"
 
 let rec loop args = 
     let master2slave_in, master2slave_out = Unix.pipe () 
@@ -76,6 +45,9 @@ let rec loop args =
             Flags.running_coqv := true
         end;
         ignore(Thread.create worker cin);
+        if not (Thread_mgr.create_coqtop_thread Worker.work cin) then begin
+            print_endline ()
+        end; 
         request_init None;
         while !running do
             if not !Flags.running_coqv then begin
@@ -109,28 +81,8 @@ let rec loop args =
 let _ = 
     Arg.parse 
         [
-            "-ip", Arg.String (fun s -> 
-                    try
-                        Communicate.vagent := Some (Communicate.get_visualize_agent s)
-                    with _ -> print_endline ("connect to vmdv in "^s^" failed.")
-                ), "\tIP address of the VMDV.";
-            "-debug", Arg.Unit (fun () -> 
-                    if not (Sys.file_exists "log") then begin
-                        let log_dir_created = Sys.command "mkdir log" in
-                        if log_dir_created <> 0 then begin
-                            print_endline "Warning: cannot create directory log, now running in non-debug mode";
-                        end else begin
-                            Flags.debug := true
-                        end
-                    end else begin
-                        Flags.debug := true
-                    end;
-                    if !Flags.debug = true then begin
-                        Runtime.logs := Some {
-                            coqtop_log = open_out ("./log/"^(!Flags.xml_log_file)); 
-                            vmdv_log = open_out ("./log/"^(!Flags.json_log_file))}
-                    end
-                ), "\tUsing debug mode or not."
+            "-ip", Arg.String (fun s -> Communicate.init_vmdv_agent s), "\tIP address of the VMDV.";
+            "-debug", Arg.Unit (fun () -> Log.init_log_files ()), "\tUsing debug mode or not."
         ]
         (fun s -> print_endline ("unknown option"^s))
         "Usage: coqv [-ip <ip_address>] [-debug]";

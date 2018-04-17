@@ -1,9 +1,9 @@
 let coqtop_thread = ref None
 let vmdv_thread = ref None
 
-let create_coqtop_thread worker cin = 
+let create_coqtop_thread work cin = 
   try
-    coqtop_thread := Some (Thread.create worker cin);
+    coqtop_thread := Some (Thread.create work cin);
     true
   with 
     _ -> false
