@@ -1,0 +1,20 @@
+induction n;
+ intros.
+ simpl.
+ assert (forall x, add x 0 = x).
+
+ induction x.
+ simpl.
+ reflexivity.
+ simpl.
+ rewrite addnS.
+ rewrite IHx.
+ reflexivity.
+ rewrite H.
+ reflexivity.
+ rewrite addnS.
+ simpl.
+ rewrite addnS.
+ rewrite IHn.
+ reflexivity.
+Qed.
