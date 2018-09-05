@@ -458,6 +458,22 @@ let interpret_cmd cmd_str_list =
         | cmd :: options -> 
         begin
             match cmd with
+            | "visualize" ->
+                begin
+                match (List.hd options) with
+                | "on" ->
+                    let s = List.hd (List.tl options) in
+                    begin try
+                        Communicate.vagent := Some (Communicate.get_visualize_agent s);
+                        print_endline "connected to vmdv."
+                    with _ -> print_endline ("connect to vmdv in "^s^" failed.")
+                    end
+                | "off" -> 
+                    Communicate.close_current_visualize_agent ();
+                    (* Communicate.vagent := None; *)
+                    print_endline "now close the connect to vmdv"
+                | _ -> print_endline "invalid command" 
+                end
             | "stateid" -> print_endline ("current stateid: "^(string_of_int (!Doc_model.current_stateid)))
             | "node" -> 
                 begin try
@@ -496,17 +512,40 @@ let interpret_cmd cmd_str_list =
                 let lineno = ref 1 in
                 let chars_to_string chars = 
                     String.trim (String.init (List.length chars) (fun i -> List.nth chars i)) in
-                let inpt_buffer = ref [] in begin
+                let inpt_buffer = ref [] in 
+                let comment_level = ref [] in
+                begin
                     try
                         while true do
                             let c = input_char inpt in
                             match c with
                             | '\n' -> 
                                 incr lineno; 
-                                if List.length !inpt_buffer > 0 && List.nth !inpt_buffer (List.length !inpt_buffer - 1) <> ' ' then  
+                                if !comment_level = [] && List.length !inpt_buffer > 0 && List.nth !inpt_buffer (List.length !inpt_buffer - 1) <> ' ' then  
                                     inpt_buffer := !inpt_buffer @ [' ']
-                            | '.' -> let cmd_str = chars_to_string (!inpt_buffer @ ['.']) in cmd_strs := !cmd_strs @ [cmd_str]; inpt_buffer := []
-                            | _ -> inpt_buffer := !inpt_buffer @ [c]
+                            | '.' -> 
+                                if !comment_level = [] then begin
+                                    let cmd_str = chars_to_string (!inpt_buffer @ ['.']) in 
+                                    if cmd_str <> "" && cmd_str <> "." then
+                                        cmd_strs := !cmd_strs @ [cmd_str]; 
+                                    inpt_buffer := []
+                                end
+                            | '(' ->
+                                let c1 = input_char inpt in
+                                if c1 = '*' then
+                                    comment_level := "*"::!comment_level
+                                else if !comment_level = [] then
+                                   inpt_buffer := !inpt_buffer @ [c;c1]
+                            | '*' ->
+                                let c1 = input_char inpt in
+                                if c1 = ')' then
+                                    comment_level := List.tl !comment_level
+                                else if !comment_level = [] then
+                                    inpt_buffer := !inpt_buffer @ [c;c1]
+
+                            | _ -> 
+                                if !comment_level = [] then
+                                    inpt_buffer := !inpt_buffer @ [c]
                         done
                     with
                         End_of_file ->

@@ -83,7 +83,9 @@ let get_cmd_type cmd =
     | "Show" :: tl_split as cmd -> ProofHandling cmd
     | "Guarded" :: tl_split as cmd -> ProofHandling cmd
     | "Optimize" :: tl_split as cmd -> ProofHandling cmd
-    | "Require" :: tl_split -> Require
+    | "Require" :: tl_split | "Export" :: tl_split -> Require
+    (* | "Definition" :: tl_split | "Ltac" :: tl_split | "Tactic" :: tl_split  *)
+    (* | "Fixpoint" :: tl_split | "Inductive" ::  -> Require *)
     (* | "move" :: tl_split -> Edit_label
     | "rename" :: tl_split -> Edit_label
     | "set" :: tl_split -> Edit_label

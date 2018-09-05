@@ -11,6 +11,8 @@ type visualize_agent =
         sending_queue: message Queue.t;
         sending_mutex: Mutex.t;
         sending_conditional: Condition.t;
+        mutable sending_thread: Thread.t;
+        mutable receiving_thread: Thread.t;
     }
     
 let vagent : (visualize_agent option) ref = ref None
@@ -44,7 +46,7 @@ let feedback_fail vagent sid error_msg = wait_to_send vagent (Feedback_fail (sid
 
 let sending vagent =
     let cout = vagent.output in
-    while vagent.is_alive do
+    begin try while vagent.is_alive do
         if Queue.is_empty vagent.sending_queue then begin
             Mutex.lock vagent.sending_mutex;
             Condition.wait vagent.sending_conditional vagent.sending_mutex;
@@ -60,7 +62,9 @@ let sending vagent =
 
             log_if_possible ("Sent: "^(Yojson.Basic.to_string json_msg)^"\n")
         end
-    done
+    done with _ -> ()
+    end;
+    print_endline "vmdv message sending thread exit"
 
 let parse vagent msg = 
     match msg with
@@ -84,7 +88,7 @@ let parse vagent msg =
 
 let receiving vagent =
     let cin = vagent.input in 
-    while vagent.is_alive do
+    begin try while vagent.is_alive do
         let buffer = Bytes.create !Flags.json_bufsize in
         let len = input cin buffer 0 !Flags.json_bufsize in
         let raw_str = Bytes.sub_string buffer 0 len in
@@ -92,22 +96,40 @@ let receiving vagent =
         log_if_possible ("Received: "^(Yojson.Basic.to_string json_msg)^"\n");
         let msg = msg_of_json json_msg in
         parse vagent msg
-    done
+    done with _ -> ()
+    end;
+    print_endline "vmdv message receiving thread exit"
 
-let start_send_receive vagent =
+(* let start_send_receive vagent =
     ignore (Thread.create (fun vagent -> receiving vagent) vagent);
-    ignore (Thread.create (fun vagent -> sending vagent) vagent)
+    ignore (Thread.create (fun vagent -> sending vagent) vagent) *)
 
-    let get_visualize_agent ip_addr = 
-        let i,o = Unix.open_connection (Unix.ADDR_INET (Unix.inet_addr_of_string ip_addr, 3333)) in
-        let vagent: visualize_agent = {
-            input = i;
-            output = o;
-            is_alive = true;
-            sending_queue = Queue.create ();
-            sending_mutex = Mutex.create ();
-            sending_conditional = Condition.create ()
-        } in
-        start_send_receive vagent;
-        vagent
-    
+let get_visualize_agent ip_addr = 
+    let i,o = Unix.open_connection (Unix.ADDR_INET (Unix.inet_addr_of_string ip_addr, 3333)) in
+    let vagent: visualize_agent = {
+        input = i;
+        output = o;
+        is_alive = true;
+        sending_queue = Queue.create ();
+        sending_mutex = Mutex.create ();
+        sending_conditional = Condition.create ();
+        sending_thread = Thread.self ();
+        receiving_thread = Thread.self ()
+    } in
+    let st = (Thread.create (fun vagent -> receiving vagent) vagent)
+    and rt = (Thread.create (fun vagent -> sending vagent) vagent) in
+    vagent.sending_thread <- st;
+    vagent.receiving_thread <- rt;
+    (* start_send_receive vagent; *)
+    vagent
+
+let close_current_visualize_agent () =
+    match !vagent with
+    | None -> ()
+    | Some vagt ->
+        vagt.is_alive <- false;
+        (* Thread.kill vagt.sending_thread;
+        Thread.kill vagt.receiving_thread; *)
+        Unix.shutdown_connection vagt.input;
+        close_out vagt.output;
+        vagent := None
