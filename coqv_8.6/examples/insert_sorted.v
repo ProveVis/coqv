@@ -41,7 +41,8 @@ Require Export Arith.EqNat.  (* Contains [beq_nat], among other things *)
 
 (* Definition admit {T: Type} : T.  Admitted. *)
 
-Require String. Open Scope string_scope.
+Require String. 
+Open Scope string_scope.
 
 Ltac move_to_top x :=
   match reverse goal with
@@ -492,5 +493,7 @@ simpl; auto.*)
         apply IHl' in H_sorted_l'.
         destruct l'; simpl; auto.
         destruct (n <=? n0); auto.
-        inversion HdRel_n'_l'. auto.
+        inversion HdRel_n'_l'. 
+        auto.
 Qed.
+

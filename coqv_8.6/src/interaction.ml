@@ -525,10 +525,15 @@ let interpret_cmd cmd_str_list =
                                     inpt_buffer := !inpt_buffer @ [' ']
                             | '.' -> 
                                 if !comment_level = [] then begin
-                                    let cmd_str = chars_to_string (!inpt_buffer @ ['.']) in 
-                                    if cmd_str <> "" && cmd_str <> "." then
-                                        cmd_strs := !cmd_strs @ [cmd_str]; 
-                                    inpt_buffer := []
+                                    let c1 = input_char inpt in 
+                                    begin match c1 with
+                                    | ' ' | '\t' | '\n' -> 
+                                        let cmd_str = String.trim (chars_to_string (!inpt_buffer @ ['.'])) in 
+                                        if cmd_str <> "" && cmd_str <> "." then
+                                            cmd_strs := !cmd_strs @ [cmd_str]; 
+                                        inpt_buffer := []
+                                    | _ -> inpt_buffer := !inpt_buffer @ [c;c1]
+                                    end
                                 end
                             | '(' ->
                                 let c1 = input_char inpt in
@@ -552,7 +557,9 @@ let interpret_cmd cmd_str_list =
                             if List.length !cmd_strs = 0 then begin
                                 printf "The content of %s is empty\n" (List.hd options);
                                 flush stdout
-                            end else if (chars_to_string !inpt_buffer = "") then begin
+                            end else if (String.trim(chars_to_string !inpt_buffer) = "") then begin
+                                print_endline "command read:";
+                                List.iter (fun cmd -> print_endline cmd) !cmd_strs;
                                 let cmdhd, cmdtl = List.hd !cmd_strs, List.tl !cmd_strs in
                                 batch_commands := cmdtl;
                                 (* printf "number of commands wait to send to coqtop: %d\n" (List.length !batch_commands); *)
@@ -561,6 +568,8 @@ let interpret_cmd cmd_str_list =
                                 printf "Successfully read from file %s\n" (List.hd options);
                                 flush stdout
                             end else begin
+                                print_endline "command read:";
+                                List.iter (fun cmd -> print_endline (cmd^"--\n")) !cmd_strs;
                                 printf "read file %s error: line %d\n" (List.hd options) !lineno;
                                 flush stdout
                             end
