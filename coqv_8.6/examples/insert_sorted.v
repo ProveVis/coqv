@@ -303,7 +303,7 @@ Module Import PriorityOrder <: TotalLeBool.
   Proof. induction a1; destruct a2; simpl; auto. Qed.
 End PriorityOrder.
 
-Example test_Sorted : Sorted leb [1; 2; 3].
+(* Example test_Sorted : Sorted leb [1; 2; 3].
 Proof. auto. Qed.
 
 Example test_not_Sorted : Sorted leb [2; 1; 3] -> False.
@@ -316,7 +316,7 @@ Proof.
     | [ H : HdRel _ 2 [1; 3] |- False ] => inversion_clear H
     | [ H : is_true (2 <=? 1) |- False ] => inversion_clear H
   end.
-Qed.
+Qed. *)
 
 
 (*=========================================================================
@@ -449,7 +449,7 @@ Fixpoint insert_sorted (n : nat) (l : list nat) : list nat :=
 (* It's worth writing unit tests before trying to prove something really
    complicated, because doing so will make basic failures obvious, and
    you won't watch a proof fall apart mysteriously on some subclause. *)
-Example test_insert_3_1_2 :
+(* Example test_insert_3_1_2 :
   insert_sorted 2 (insert_sorted 1 (insert_sorted 3 [])) = [1; 2; 3].
 Proof. reflexivity. Qed.
 
@@ -459,7 +459,7 @@ Proof. reflexivity. Qed.
 
 Example test_insert_2_1_1 :
   insert_sorted 1 (insert_sorted 1 (insert_sorted 2 [])) = [1; 1; 2].
-Proof. reflexivity. Qed.
+Proof. reflexivity. Qed. *)
 
 
 (*=========================================================================

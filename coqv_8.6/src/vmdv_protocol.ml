@@ -14,8 +14,10 @@ type message =
     | Highlight_node of string * string
     | Unhighlight_node of string * string
     | Clear_color of string
+    | Set_proof_rule of string * string * string
     | Feedback_ok of string
     | Feedback_fail of string * string
+
 
 
 
@@ -94,6 +96,13 @@ let json_of_msg (msg:message) =
         `Assoc [
             ("type", `String "clear_color");
             ("session_id", `String sid)
+        ]
+    | Set_proof_rule (sid, nid, rule) ->
+        `Assoc [
+            ("type", `String "set_proof_rule");
+            ("session_id", `String sid);
+            ("node_id", `String nid);
+            ("rule", `String rule)
         ]
     | Feedback_ok sid ->
         `Assoc [

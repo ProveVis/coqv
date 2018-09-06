@@ -69,6 +69,12 @@ let on_change_node_state nid state =
 let on_change_node_label (node:node) new_label tactic = 
     set_new_label node.id new_label tactic
 
+let on_change_tactic nid tactic = 
+    Options.action (fun vagt -> 
+        let sid = !Proof_model.current_session_id in
+        if sid <> "" then Communicate.set_proof_rule vagt sid nid tactic
+        ) !Communicate.vagent
+
 let on_add_node node_from node_to state = 
     let label = Doc_model.uncommitted_command () in
     add_edge node_from node_to [label];
@@ -124,7 +130,9 @@ let add_new_goals cmd goals =
                 on_change_node_state cnode.id Admitted
             else
                 on_change_node_state cnode.id Proved;
-            add_tactic cnode.id (Doc_model.uncommitted_command ())
+            add_tactic cnode.id (Doc_model.uncommitted_command ());
+            let tactic = get_tactic cnode.id in
+            on_change_tactic cnode.id tactic
         end else begin
             begin match cmd with
             (* | Focus _ ->
@@ -142,7 +150,9 @@ let add_new_goals cmd goals =
                 ) false new_nodes in
                 if (not has_new) && (not (List.mem cnode.id (List.map (fun n -> n.id) new_nodes))) then begin
                     on_change_node_state cnode.id Proved;
-                    add_tactic cnode.id (Doc_model.uncommitted_command ())
+                    add_tactic cnode.id (Doc_model.uncommitted_command ());
+                    let tactic = get_tactic cnode.id in
+                    on_change_tactic cnode.id tactic
                 end
             (* | _ -> () *)
             end;

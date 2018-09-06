@@ -40,6 +40,7 @@ let change_proof_state vagent sid pstate = wait_to_send vagent (Change_proof_sta
 let highlight_node vagent sid nid = wait_to_send vagent (Highlight_node (sid, nid))
 let unhighlight_node vagent sid nid = wait_to_send vagent (Unhighlight_node (sid, nid))
 let clear_color vagent sid = wait_to_send vagent (Clear_color sid)
+let set_proof_rule vagent sid nid rule = wait_to_send vagent (Set_proof_rule (sid, nid, rule))
 let feedback_ok vagent sid = wait_to_send vagent (Feedback_ok sid)
 let feedback_fail vagent sid error_msg = wait_to_send vagent (Feedback_fail (sid, error_msg))
 

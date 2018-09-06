@@ -212,6 +212,15 @@ let add_tactic nodeid tactic =
         let tactics, children_ids = Hashtbl.find proof_tree.edges nodeid in
         Hashtbl.add proof_tree.edges nodeid (tactics@[tactic], children_ids)
 
+let get_tactic nodeid =
+    let proof_tree = current_proof_tree () in
+    if Hashtbl.mem proof_tree.edges nodeid then begin
+        let tactic = fst (Hashtbl.find proof_tree.edges nodeid) in
+        let tmp_str = ref "" in
+        List.iter (fun t -> tmp_str := !tmp_str ^ t) tactic;
+        !tmp_str
+    end else ""
+
 let new_session sname skind sstate proof_tree = 
     {
         name = sname;

@@ -522,7 +522,7 @@ let interpret_cmd cmd_str_list =
                             | '\n' -> 
                                 incr lineno; 
                                 if !comment_level = [] && List.length !inpt_buffer > 0 && List.nth !inpt_buffer (List.length !inpt_buffer - 1) <> ' ' then  
-                                    inpt_buffer := !inpt_buffer @ [' ']
+                                    inpt_buffer := !inpt_buffer @ ['\n']
                             | '.' -> 
                                 if !comment_level = [] then begin
                                     let c1 = input_char inpt in 
@@ -558,8 +558,8 @@ let interpret_cmd cmd_str_list =
                                 printf "The content of %s is empty\n" (List.hd options);
                                 flush stdout
                             end else if (String.trim(chars_to_string !inpt_buffer) = "") then begin
-                                print_endline "command read:";
-                                List.iter (fun cmd -> print_endline cmd) !cmd_strs;
+                                (* print_endline "command read:";
+                                List.iter (fun cmd -> print_endline cmd) !cmd_strs; *)
                                 let cmdhd, cmdtl = List.hd !cmd_strs, List.tl !cmd_strs in
                                 batch_commands := cmdtl;
                                 (* printf "number of commands wait to send to coqtop: %d\n" (List.length !batch_commands); *)
