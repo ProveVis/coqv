@@ -109,11 +109,12 @@ and response_goals msg =
                 print_endline "current proof tree is admitted";
                 Callbacks.on_change_proof_state Declared;
                 current_session_id := ""
-            | cmd -> print_endline ("Don't know what to do when receiving \"Good None\" in respose_goals with cmd type: "^(str_cmd_type cmd))
+            | cmd -> () 
+                (* print_endline ("Don't know what to do when receiving \"Good None\" in respose_goals with cmd type: "^(str_cmd_type cmd)) *)
         end;
         Doc_model.commit ()
     | Good (Some goals) -> 
-        print_endline ("have received some goals after "^(str_cmd_type !Coqv_utils.current_cmd_type));
+        (* print_endline ("have received some goals after "^(str_cmd_type !Coqv_utils.current_cmd_type)); *)
         on_receive_goals !Coqv_utils.current_cmd_type goals;
         Doc_model.commit ()
     | Fail (id,loc, msg) -> 
@@ -473,6 +474,15 @@ let interpret_cmd cmd_str_list =
                     (* Communicate.vagent := None; *)
                     print_endline "now close the connect to vmdv"
                 | _ -> print_endline "invalid command" 
+                end
+            | "show" ->
+                begin match (List.hd options) with
+                | "module" -> List.iter (fun (m:Types.modul) -> print_endline m.name) !Proof_model.moduls
+                | "proofs" -> 
+                    let m = List.hd !Proof_model.moduls in
+                    let ss = m.sessions in
+                    Hashtbl.iter (fun a b -> print_endline a) ss
+                | _ -> ()
                 end
             | "stateid" -> print_endline ("current stateid: "^(string_of_int (!Doc_model.current_stateid)))
             | "node" -> 

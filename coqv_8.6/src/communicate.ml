@@ -83,8 +83,9 @@ let parse vagent msg =
     | Feedback_fail (sid, error_msg) ->
         printf "Feedback Fail received from %s: %s\n" sid error_msg;
         flush stdout
+    | Clear_color sid -> ()
     | _ -> 
-        printf "Not supposed to recieve this message\n";
+        printf "Not supposed to recieve this message: \n%s\n" (Yojson.Basic.to_string (json_of_msg msg));
         flush stdout
 
 let receiving vagent =

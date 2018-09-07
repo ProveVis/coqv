@@ -30,20 +30,20 @@ let on_new_session (session: session) =
 
 let rec change_one_node_state (node:node) state = 
     if node.state <> state then begin
-        print_endline ("change state of ndoe "^node.id^" to "^(str_node_state state));
+        (* print_endline ("change state of ndoe "^node.id^" to "^(str_node_state state)); *)
         node.state <- state;
         Options.action (fun vagt -> 
             let sid = !Proof_model.current_session_id in
             if sid <> "" then Communicate.change_node_state vagt sid node.id state
             ) !Communicate.vagent;
-        print_endline ("changed state of ndoe "^node.id);
+        (* print_endline ("changed state of ndoe "^node.id); *)
         true
     end else
         false
 and update_parent_node_state (node:node) = 
     let parent = node.parent in
     let prooftree = current_proof_tree () in
-    print_endline ("updating parent of "^node.id^": "^parent.id);
+    (* print_endline ("updating parent of "^node.id^": "^parent.id); *)
     if parent.id <> node.id then begin
         
         if is_children_proved prooftree parent.id then begin
@@ -106,8 +106,9 @@ let on_change_proof_state pstate =
         Options.action (fun vagt -> 
             let sid = !Proof_model.current_session_id in
             if sid <> "" then Communicate.change_proof_state vagt sid pstate
-            ) !Communicate.vagent;
-        print_endline ("changed the state of the proof of "^(!current_session_id)^" to "^(str_proof_state pstate))
+            ) !Communicate.vagent
+        (* ;
+        print_endline ("changed the state of the proof of "^(!current_session_id)^" to "^(str_proof_state pstate)) *)
     end
 
 let add_new_goals cmd goals =     
@@ -125,7 +126,7 @@ let add_new_goals cmd goals =
             stateid = (*!Doc_model.current_stateid*)-1;
         }) fg_goals in
         if List.length new_nodes = 0 then begin
-            print_endline "No more goals.";
+            (* print_endline "No more goals."; *)
             if cmd = ["Admit"] then
                 on_change_node_state cnode.id Admitted
             else
@@ -165,11 +166,15 @@ let add_new_goals cmd goals =
                 end         
             ) (List.tl new_nodes);
             let new_focused_node = List.hd new_nodes in
-            if node_exists new_focused_node.id then
-                on_change_node_state new_focused_node.id Chosen
-            else begin
+            if node_exists new_focused_node.id then begin
+                on_change_node_state new_focused_node.id Chosen;
+                print_endline "Current Goal:\n";
+                print_endline (Status.str_node new_focused_node.id);
+            end else begin
                 on_add_node cnode new_focused_node Chosen;
-                on_change_node_state cnode.id Not_proved
+                on_change_node_state cnode.id Not_proved;
+                print_endline "Current Goal:\n";
+                print_endline (Status.str_node new_focused_node.id);
             end
         end)               
 
@@ -180,11 +185,11 @@ let handle_proof cmd goals =
         on_change_proof_state Defined;
         current_session_id := ""
     | ["Admitted"] -> 
-        print_endline "current proof tree is admitted";
+        (* print_endline "current proof tree is admitted"; *)
         on_change_proof_state Declared;
         current_session_id := ""
     | "Abort" :: _ -> 
-        print_endline "current proof tree is aborted";
+        (* print_endline "current proof tree is aborted"; *)
         on_change_proof_state Aborted;
         current_session_id := ""
     | "Undo" :: _ | "Restart" :: _ | ["Editat"] -> 
@@ -236,7 +241,10 @@ let on_receive_goals cmd_type goals =
             let proof_tree = new_proof_tree node in
             let session = new_session thm_name kind Proving proof_tree in
             on_new_session session;
-            print_endline ("created new session "^thm_name)
+            print_endline "Current Goal:\n";
+            print_endline (Status.str_node goal.goal_id);
+            (* ;
+            print_endline ("created new session "^thm_name) *)
         | ProofHandling cmd -> handle_proof cmd goals
         | Tactic cmd -> add_new_goals cmd goals
         | Require -> ()

@@ -23,6 +23,10 @@ let rec str_tactics ttcs =
     | [] -> ""
     | ttc :: ttcs' -> ttc^" "^(str_tactics ttcs')
 
+let str_node nid = 
+    let node = Proof_model.select_node nid (Proof_model.current_proof_tree ()) in
+    "stateid: "^(string_of_int node.stateid)^" ("^(str_node_state node.state)^")\n"^ (Types.str_label node.label)
+
 let str_proof_tree sn_path = 
     let str_sp_list = String.split_on_char '.' (String.trim sn_path) in
     let sno = Proof_model.find_session str_sp_list in

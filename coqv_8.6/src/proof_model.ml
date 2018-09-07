@@ -183,7 +183,7 @@ let print_label node =
 
 
 let add_edge from_node to_node tatic = 
-    print_endline ("adding edge: "^from_node.id^"-->"^to_node.id);
+    (* print_endline ("adding edge: "^from_node.id^"-->"^to_node.id); *)
     let proof_tree = current_proof_tree () in
     if from_node.id = to_node.id then ();
     if Hashtbl.mem proof_tree.nodes from_node.id then begin
