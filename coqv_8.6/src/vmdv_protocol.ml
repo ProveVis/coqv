@@ -43,7 +43,8 @@ let json_of_msg (msg:message) =
             ("node", `Assoc [
                 ("id", `String node.id);
                 ("label", `String (str_label node.label));
-                ("state", `String (str_node_state node.state))
+                ("state", `String (str_node_state node.state));
+                ("state_id", `String (string_of_int node.stateid))
             ])
         ]
     | Remove_node (sid, nid) ->

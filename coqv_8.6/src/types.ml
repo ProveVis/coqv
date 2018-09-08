@@ -49,6 +49,7 @@ type node = {
     mutable stateid: int; (*stateid when this node is chosen in a proof*)
 }
 
+
 type tactic = string list
 
 type step = tactic * node * (node list)
