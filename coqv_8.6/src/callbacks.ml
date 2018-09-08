@@ -10,6 +10,9 @@ let focused_goalid = ref 0
 let last_goalid_list = ref [] *)
 
 let in_focus_mode = ref false 
+let leaf_nids = ref []
+type pending_task = Focus of string | TryedFocus of string | No_task
+let pending_task = ref No_task
 
 let on_new_session (session: session) = 
     current_session_id := session.name;
@@ -206,6 +209,7 @@ let handle_proof cmd goals =
     | "Focus" :: _ | "Unfocus" :: _ -> 
         let fg_goals = goals.fg_goals in
         let nids = List.map (fun g -> g.goal_id) fg_goals in begin
+        (* leaf_nids := nids; *)
         match select_chosen_node () with
         | None -> print_endline ("No focused node right now")
         | Some cnode -> 
@@ -223,6 +227,7 @@ let handle_proof cmd goals =
 
 let on_receive_goals cmd_type goals = 
     (*printf "focused goals number: %d. \n" (List.length (goals.fg_goals));*)
+    leaf_nids := List.map (fun g -> g.goal_id) goals.fg_goals;
     begin
         match cmd_type with
         | Module modul_name -> moduls := (create_module modul_name) :: !moduls

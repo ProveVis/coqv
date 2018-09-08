@@ -14,6 +14,8 @@ open Coqv_utils
 
 let batch_commands = ref []
 
+
+
 type request_mode = 
       Request_add of (Stateid.t * string)    
     | Request_edit_at of Stateid.t
@@ -459,6 +461,7 @@ let interpret_cmd cmd_str_list =
         | cmd :: options -> 
         begin
             match cmd with
+<<<<<<< HEAD
             | "visualize" ->
                 begin
                 match (List.hd options) with
@@ -483,6 +486,27 @@ let interpret_cmd cmd_str_list =
                     let ss = m.sessions in
                     Hashtbl.iter (fun a b -> print_endline a) ss
                 | _ -> ()
+=======
+            | "prove" ->
+                let nid = List.hd options in
+                if Proof_model.node_exists nid then
+                    let node = Proof_model.get_node nid in
+                    let chosen_stateid = node.stateid in
+                    if chosen_stateid <> (-1) then
+                        request_edit_at chosen_stateid
+                    else begin
+                        let pos = Lists.find_pos nid !leaf_nids in
+                        if pos >= 0 then begin
+                            handle_input ("Focus "^(string_of_int (pos+1))^".");
+                            pending_task := No_task
+                        end else begin
+                            handle_input "Unfocus.";
+                            pending_task := TryedFocus nid
+                        end
+                    end
+                else begin
+                    print_endline ("Cannot find node "^nid)
+>>>>>>> focus
                 end
             | "stateid" -> print_endline ("current stateid: "^(string_of_int (!Doc_model.current_stateid)))
             | "node" -> 

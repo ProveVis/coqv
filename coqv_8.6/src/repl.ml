@@ -3,6 +3,7 @@ open Str
 open Runtime
 open Interaction
 open Interface
+open Callbacks
 
 let command_re = Str.regexp ":[-_A-Za-z0-9]+"
 
@@ -28,15 +29,36 @@ let worker cin =
         (* print_endline ("there are "^(string_of_int (List.length !batch_commands))^" commands wait to send to coqtop"); *)
         if Doc_model.is_processed () && !Doc_model.goal_responsed then begin
             (* print_endline ("coqtop processed "); *)
-            if !Flags.batch_mode = false || (!batch_commands = []) then begin
-                Flags.batch_mode := false;
-                Flags.running_coqv := true;
-                Condition.signal read_write_condition
-            end else begin
-                let bch, bct = List.hd !batch_commands, List.tl !batch_commands in
-                handle_input bch;
-                batch_commands := bct
-            end
+            match !Callbacks.pending_task with
+            | Focus nid -> 
+                let pos = Lists.find_pos nid !Callbacks.leaf_nids in
+                if pos >= 0 then begin
+                    let cmd_str = "Focus "^(string_of_int (pos+1))^"." in
+                    handle_input cmd_str;
+                    Callbacks.pending_task := No_task
+                end else begin
+                    handle_input "Unfocus.";
+                    Callbacks.pending_task := TryedFocus nid
+                end
+            | TryedFocus nid -> 
+                let pos = Lists.find_pos nid !Callbacks.leaf_nids in
+                if pos >= 0 then begin
+                    let cmd_str = "Focus "^(string_of_int (pos+1))^"." in
+                    handle_input cmd_str
+                end else begin
+                    print_endline ("Cannot chose node "^nid)
+                end;
+                Callbacks.pending_task := No_task
+            | No_task ->
+                if !Flags.batch_mode = false || (!batch_commands = []) then begin
+                    Flags.batch_mode := false;
+                    Flags.running_coqv := true;
+                    Condition.signal read_write_condition
+                end else begin
+                    let bch, bct = List.hd !batch_commands, List.tl !batch_commands in
+                    handle_input bch;
+                    batch_commands := bct
+                end
         end
     done;
     print_endline "worker quit"
