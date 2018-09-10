@@ -1,27 +1,3 @@
-open Printf
-open Types
-open Runtime
-open Vmdv_protocol
-
-type visualize_agent =
-    {
-        mutable input: in_channel;
-        mutable output: out_channel;
-        mutable is_alive: bool;
-        sending_queue: message Queue.t;
-        sending_mutex: Mutex.t;
-        sending_conditional: Condition.t;
-        mutable sending_thread: Thread.t;
-        mutable receiving_thread: Thread.t;
-    }
-    
-let vagent : (visualize_agent option) ref = ref None
-
-    
-let log_if_possible str = 
-    match !Runtime.logs with
-    | None -> ()
-    | Some logs -> output_string logs.coqtop_log str; flush logs.coqtop_log
 
 let wait_to_send vagent msg = 
     Mutex.lock vagent.sending_mutex;
@@ -41,6 +17,7 @@ let highlight_node vagent sid nid = wait_to_send vagent (Highlight_node (sid, ni
 let unhighlight_node vagent sid nid = wait_to_send vagent (Unhighlight_node (sid, nid))
 let clear_color vagent sid = wait_to_send vagent (Clear_color sid)
 let set_proof_rule vagent sid nid rule = wait_to_send vagent (Set_proof_rule (sid, nid, rule))
+let remove_subproof vagent sid nid = wait_to_send vagent (Remove_subproof (sid, nid))
 let feedback_ok vagent sid = wait_to_send vagent (Feedback_ok sid)
 let feedback_fail vagent sid error_msg = wait_to_send vagent (Feedback_fail (sid, error_msg))
 
@@ -77,6 +54,11 @@ let parse vagent msg =
         printf "Unhighlight node %s in session %s\n" nid sid;
         flush stdout;
         feedback_ok vagent sid
+    | Remove_subproof (sid, nid) ->
+        let node = Proof_model.get_node nid in
+        let new_stateid = node.stateid in
+        if new_stateid <> -1 then
+            Interaction.request_edit_at new_stateid
     | Feedback_ok sid ->
         printf "Feedback OK received from %s\n" sid;
         flush stdout
@@ -88,7 +70,8 @@ let parse vagent msg =
         printf "Not supposed to recieve this message: \n%s\n" (Yojson.Basic.to_string (json_of_msg msg));
         flush stdout
 
-let receiving vagent =
+let receiving parameter =
+    let vagent, parse_func = parameter in
     let cin = vagent.input in 
     begin try while vagent.is_alive do
         let buffer = Bytes.create !Flags.json_bufsize in
@@ -106,7 +89,7 @@ let receiving vagent =
     ignore (Thread.create (fun vagent -> receiving vagent) vagent);
     ignore (Thread.create (fun vagent -> sending vagent) vagent) *)
 
-let get_visualize_agent ip_addr = 
+let get_visualize_agent ip_addr parse_func = 
     let i,o = Unix.open_connection (Unix.ADDR_INET (Unix.inet_addr_of_string ip_addr, 3333)) in
     let vagent: visualize_agent = {
         input = i;
@@ -118,7 +101,7 @@ let get_visualize_agent ip_addr =
         sending_thread = Thread.self ();
         receiving_thread = Thread.self ()
     } in
-    let st = (Thread.create (fun vagent -> receiving vagent) vagent)
+    let st = (Thread.create (fun para -> receiving para) (vagent, parse_func))
     and rt = (Thread.create (fun vagent -> sending vagent) vagent) in
     vagent.sending_thread <- st;
     vagent.receiving_thread <- rt;

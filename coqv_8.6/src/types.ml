@@ -80,3 +80,33 @@ type modul = {
     modul_tbl: (string, modul) Hashtbl.t;
 }
 (********************************************************************)
+
+type message = 
+    | Create_session of string * string * string * (node_state list)
+    | Remove_session of string
+    | Add_node of string * node
+    | Remove_node of string * string
+    | Add_edge of string * string * string * string
+    | Remove_edge of string * string * string
+    | Change_node_state of string * string * node_state
+    | Change_proof_state of string * proof_state
+    | Highlight_node of string * string
+    | Unhighlight_node of string * string
+    | Clear_color of string
+    | Set_proof_rule of string * string * string
+    | Remove_subproof of string * string (*Remove_subproof (sid, nid)*) 
+    | Feedback_ok of string
+    | Feedback_fail of string * string
+
+type visualize_agent =
+    {
+        mutable input: in_channel;
+        mutable output: out_channel;
+        mutable is_alive: bool;
+        sending_queue: message Queue.t;
+        sending_mutex: Mutex.t;
+        sending_conditional: Condition.t;
+        mutable sending_thread: Thread.t;
+        mutable receiving_thread: Thread.t;
+    }
+    

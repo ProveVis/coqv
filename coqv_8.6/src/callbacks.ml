@@ -24,11 +24,11 @@ let on_new_session (session: session) =
     let node = session.proof_tree.root in
     (* History.record_step !Doc_model.current_stateid (Add_node node.id); *)
     begin
-        match !Communicate.vagent with
+        match !vagent with
         | None -> (*print_endline "no vmdv agent currently"*)()
         | Some vagt -> 
-            Communicate.create_session vagt session;
-            Communicate.add_node vagt session.name node
+            Interaction.create_session vagt session;
+            add_node vagt session.name node
     end
 
 let rec change_one_node_state (node:node) state = 
@@ -37,8 +37,8 @@ let rec change_one_node_state (node:node) state =
         node.state <- state;
         Options.action (fun vagt -> 
             let sid = !Proof_model.current_session_id in
-            if sid <> "" then Communicate.change_node_state vagt sid node.id state
-            ) !Communicate.vagent;
+            if sid <> "" then change_node_state vagt sid node.id state
+            ) !vagent;
         (* print_endline ("changed state of ndoe "^node.id); *)
         true
     end else
@@ -257,6 +257,25 @@ let on_receive_goals cmd_type goals =
             print_endline ("Unknown type of command: "^(str_cmd_type cmd_type))
     end
             
+let on_finishing_proof cmd_type = 
+    match cmd_type with
+    | ProofHandling ["Qed"] -> 
+        on_change_proof_state Defined;
+        current_session_id := ""
+        (* History.record_step !Doc_model.current_stateid Dummy *)
+    | ProofHandling ["Admitted"] ->
+        (* let chosen_node = select_chosen_node () in
+        begin match chosen_node with
+        | None -> ()
+        | Some cnode -> Callbacks.on_change_node_state cnode.id Admitted
+        end; *)
+        print_endline "current proof tree is admitted";
+        on_change_proof_state Declared;
+        current_session_id := ""
+    | cmd -> () 
+        (* print_endline ("Don't know what to do when receiving \"Good None\" in respose_goals with cmd type: "^(str_cmd_type cmd)) *)
+
+
 
 let on_edit_at stateid = 
     Doc_model.current_stateid := stateid;

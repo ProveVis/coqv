@@ -2,22 +2,6 @@ open Printf
 open Types
 open Yojson
 
-type message = 
-    | Create_session of string * string * string * (node_state list)
-    | Remove_session of string
-    | Add_node of string * node
-    | Remove_node of string * string
-    | Add_edge of string * string * string * string
-    | Remove_edge of string * string * string
-    | Change_node_state of string * string * node_state
-    | Change_proof_state of string * proof_state
-    | Highlight_node of string * string
-    | Unhighlight_node of string * string
-    | Clear_color of string
-    | Set_proof_rule of string * string * string
-    | Feedback_ok of string
-    | Feedback_fail of string * string
-
 
 
 
@@ -105,6 +89,12 @@ let json_of_msg (msg:message) =
             ("node_id", `String nid);
             ("rule", `String rule)
         ]
+    | Remove_subproof (sid, nid) ->
+        `Assoc [
+            ("type", `String "remove_subproof");
+            ("session_id", `String sid);
+            ("node_id", `String nid)
+        ]
     | Feedback_ok sid ->
         `Assoc [
             ("type", `String "feedback");
@@ -141,18 +131,14 @@ let msg_of_json json =
                         | "clear_color" ->
                             Clear_color (str_value_of_json "session_id" json)
                             (* Clear_color (get_string_of_json (get_json_of_key "session_id" str_json_list)) *)
+                        | "remove_subproof" ->
+                            Remove_subproof (str_value_of_json "session_id" json, str_value_of_json "node_id" json)
                         | "feedback" -> 
                             let status = str_value_of_json "status" json in
                             if status = "OK" then
                                 Feedback_ok (str_value_of_json "session_id" json)
                             else 
-                                Feedback_fail (str_value_of_json "session_id" json, str_value_of_json "error_msg" json)
-(*                             let status = get_string_of_json (get_json_of_key "status" str_json_list) in
-                            if status = "OK" then
-                                Feedback_ok (get_string_of_json (get_json_of_key "session_id" str_json_list))
-                            else
-                                Feedback_fail ((get_string_of_json (get_json_of_key "session_id" str_json_list)), (get_string_of_json (get_json_of_key "error_msg" str_json_list)))
- *)                        
+                                Feedback_fail (str_value_of_json "session_id" json, str_value_of_json "error_msg" json)                       
                         | _ as s -> printf "not supposed to be received by coqv: %s\n" s; exit 1
                     end
                 | _ -> printf "%s cannot be interpreted at the moment" (Yojson.Basic.to_string json_value); exit 1

@@ -36,6 +36,11 @@ type debug_info = {
 
 let logs: (debug_info option) ref = ref None
 
+let log_if_possible str = 
+    match !Runtime.logs with
+    | None -> ()
+    | Some logs -> output_string logs.coqtop_log str; flush logs.coqtop_log
+
 let log_coqtop b str = 
     match !logs with
     | None -> ()
@@ -56,6 +61,8 @@ let log_vmdv b str =
             output_string lgs.vmdv_log ("VMDV --> COQV\n"^str^"\n");
         flush lgs.vmdv_log
 
+
+let vagent : (visualize_agent option) ref = ref None
 
 
 
