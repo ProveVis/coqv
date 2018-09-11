@@ -1,68 +1,12 @@
 open Printf
 open Str
 open Runtime
-open Interaction
 open Interface
-open Callbacks
+open Coq_client
+open Vmdv_client
+open Customize
 
-let command_re = Str.regexp ":[-_A-Za-z0-9]+"
-
-let read_write_condition = Condition.create ()
-let read_write_mutex = Mutex.create ()
-
-let worker cin =     
-    let buffer = Bytes.create !Flags.xml_bufsize in
-    while !Runtime.running do
-        (* print_endline "wait for coqtop"; *)
-        let len = input cin buffer 0 !Flags.xml_bufsize in
-        (* print_endline ("coqtop responsed with length "^(string_of_int len)); *)
-        if len = 0 then
-            running := false
-        else begin
-            let output_str = Bytes.sub_string buffer 0 len in
-            (*printf "%s" (Str.global_replace (ignored_re ()) "" output_str);
-            flush stdout*)
-            if(len <> 0) then
-                handle_answer output_str;
-            flush stdout
-        end;
-        (* print_endline ("there are "^(string_of_int (List.length !batch_commands))^" commands wait to send to coqtop"); *)
-        if Doc_model.is_processed () && !Doc_model.goal_responsed then begin
-            (* print_endline ("coqtop processed "); *)
-            match !Callbacks.pending_task with
-            | Focus nid -> 
-                let pos = Lists.find_pos nid !Callbacks.leaf_nids in
-                if pos >= 0 then begin
-                    let cmd_str = "Focus "^(string_of_int (pos+1))^"." in
-                    handle_input cmd_str;
-                    Callbacks.pending_task := No_task
-                end else begin
-                    handle_input "Unfocus.";
-                    Callbacks.pending_task := TryedFocus nid
-                end
-            | TryedFocus nid -> 
-                let pos = Lists.find_pos nid !Callbacks.leaf_nids in
-                if pos >= 0 then begin
-                    let cmd_str = "Focus "^(string_of_int (pos+1))^"." in
-                    handle_input cmd_str
-                end else begin
-                    print_endline ("Cannot chose node "^nid)
-                end;
-                Callbacks.pending_task := No_task
-            | No_task ->
-                if !Flags.batch_mode = false || (!batch_commands = []) then begin
-                    Flags.batch_mode := false;
-                    Flags.running_coqv := true;
-                    Condition.signal read_write_condition
-                end else begin
-                    let bch, bct = List.hd !batch_commands, List.tl !batch_commands in
-                    handle_input bch;
-                    batch_commands := bct
-                end
-        end
-    done;
-    print_endline "worker quit"
-
+(* let command_re = Str.regexp ":[-_A-Za-z0-9]+" *)
 let rec loop args = 
     let master2slave_in, master2slave_out = Unix.pipe () 
     and slave2master_in, slave2master_out = Unix.pipe () in
@@ -80,7 +24,7 @@ let rec loop args =
         Runtime.coq_channels.cin <- cin;
         Runtime.coq_channels.cout <- cout;
         begin
-            Interaction.request_coq_info cout;
+            Coq_client.request_coq_info cout;
             Thread.delay 0.1;
             let buffer = Bytes.create !Flags.xml_bufsize in
             let len = input cin buffer 0 !Flags.xml_bufsize in
@@ -97,8 +41,22 @@ let rec loop args =
             | _ -> printf "parsing message fails");
             Flags.running_coqv := true
         end;
-        ignore(Thread.create worker cin);
+        ignore(Thread.create Coq_client.worker (cin, (Coq_client.on_receive_goals, Coq_client.on_finishing_proof)));
         request_init None;
+
+        add_coqv_cmd "visualize" ("on <IP>/off","Turn on/off vmdv client") coqv_visualize;
+        add_coqv_cmd "show" ("module/proofs","Show the names of defined modules or proofs") coqv_show;
+        add_coqv_cmd "prove" ("<nid>","Jump between nodes to be proved") coqv_prove;
+        add_coqv_cmd "stateid" ("","Show the current stateid") coqv_stateid;
+        add_coqv_cmd "node" ("<nid>","Show the information of node with ID nid") coqv_node;
+        add_coqv_cmd "status" ("","Show the current status of coqv") coqv_status;
+        add_coqv_cmd "proof" (" /<pname>", "Show the current proof tree, or the proof tree with name pname") coqv_proof;
+        add_coqv_cmd "undo_to" ("<stateid>", "Undo the proof until the given stateid") coqv_undo_to;
+        add_coqv_cmd "quit" ("","Quit the system") coqv_quit;
+        add_coqv_cmd "export" ("<fname>", "Export the coq script into a file") coqv_export;
+        add_coqv_cmd "import" ("<fname>", "Import coq script from a file") coqv_import;
+
+
         while !running do
             if not !Flags.running_coqv then begin
                 Mutex.lock read_write_mutex;
@@ -133,7 +91,7 @@ let _ =
         [
             "-ip", Arg.String (fun s -> 
                     try
-                        Communicate.vagent := Some (Communicate.get_visualize_agent s)
+                        vagent := Some (get_visualize_agent s parse_vmsv_msg)
                     with _ -> print_endline ("connect to vmdv in "^s^" failed.")
                 ), "\tIP address of the VMDV.";
             "-debug", Arg.Unit (fun () -> 

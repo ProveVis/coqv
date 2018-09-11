@@ -107,13 +107,6 @@ let str_cmd_type ct =
     | Tactic cmd -> "Tactic"^(List.fold_left (fun str c -> str^" "^c) "" cmd)
     | Require -> "Require"
     | Other cmd -> "Other"^(List.fold_left (fun str c -> str^" "^c) "" cmd)
-    (* | Proof -> "Proof"
-    | Qed -> "Qed"
-    | Admitted -> "Admitted"
-    | Focus _ -> "Focus"
-    | Admit -> "Admit"
-    | Require -> "Require"
-    | Other -> "Other" *)
 
 let rec richpp_to_string richpp = 
     Richpp.raw_print richpp

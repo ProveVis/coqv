@@ -1,6 +1,304 @@
+open Interface
+open Printf
+open Runtime
+open Types
+open Proof_model
+open Vmdv_client
+open Coqv_utils
+open Feedback
+
+(*****************************************callbacks***************************************************************)
+
+let in_focus_mode = ref false 
+let leaf_nids = ref []
+type pending_task = Focus of string | TryedFocus of string | No_task
+let pending_task = ref No_task
+
+let on_new_session (session: session) = 
+    current_session_id := session.name;
+    (* printf "current session id: %s\n" session.name; *)
+    flush stdout;
+    assert(List.length !moduls > 0);
+    add_session_to_modul (List.hd !moduls) session;
+    (*printf "%d moduls at the moment\n" (List.length !moduls);*)
+    let node = session.proof_tree.root in
+    (* History.record_step !Doc_model.current_stateid (Add_node node.id); *)
+    begin
+        match !vagent with
+        | None -> (*print_endline "no vmdv agent currently"*)()
+        | Some vagt -> 
+            Vmdv_client.create_session vagt session;
+            Vmdv_client.add_node vagt session.name node
+    end
+
+let rec change_one_node_state (node:node) state = 
+    if node.state <> state then begin
+        (* print_endline ("change state of ndoe "^node.id^" to "^(str_node_state state)); *)
+        node.state <- state;
+        Options.action (fun vagt -> 
+            let sid = !Proof_model.current_session_id in
+            if sid <> "" then change_node_state vagt sid node.id state
+            ) !vagent;
+        (* print_endline ("changed state of ndoe "^node.id); *)
+        true
+    end else
+        false
+and update_parent_node_state (node:node) = 
+    let parent = node.parent in
+    let prooftree = current_proof_tree () in
+    (* print_endline ("updating parent of "^node.id^": "^parent.id); *)
+    if parent.id <> node.id then begin
+        
+        if is_children_proved prooftree parent.id then begin
+            if change_one_node_state parent Proved then
+                update_parent_node_state parent
+        end else if is_children_admitted prooftree parent.id then begin
+            if change_one_node_state parent Admitted then
+                update_parent_node_state parent
+        end else begin
+            if change_one_node_state parent Not_proved then
+                update_parent_node_state parent
+        end
+    end 
+
+let on_change_node_state nid state = 
+    let node = get_node nid in
+    if change_one_node_state node state then begin
+        if node.state = Chosen then
+            node.stateid <- !Doc_model.current_stateid;
+        update_parent_node_state node
+    end
+
+let on_change_node_label (node:node) new_label tactic = 
+    set_new_label node.id new_label tactic
+
+let on_change_tactic nid tactic = 
+    Options.action (fun vagt -> 
+        let sid = !Proof_model.current_session_id in
+        if sid <> "" then set_proof_rule vagt sid nid tactic
+        ) !vagent
+
+let on_add_node node_from node_to state = 
+    let label = Doc_model.uncommitted_command () in
+    Proof_model.add_edge node_from node_to [label];
+    (* History.record_step !Doc_model.current_stateid (Add_node node_to.id); *)
+    node_to.state <- state;
+    if state = Chosen then
+            node_to.stateid <- !Doc_model.current_stateid;
+    begin
+        match !vagent with
+        | None -> (*print_endline "no vmdv agent currently"*)()
+        | Some vagt ->
+            let sid = !Proof_model.current_session_id in
+            if sid <> "" then begin
+                Vmdv_client.add_node vagt sid node_to;
+                Vmdv_client.add_edge vagt sid node_from.id node_to.id label    
+            end
+    end
+
+let on_remove_node nid =
+    if Proof_model.remove_node nid then begin
+        Options.action (fun vagt ->
+            let sid = !Proof_model.current_session_id in
+            if sid <> "" then Vmdv_client.remove_node vagt sid nid
+        ) !vagent
+    end
+
+let on_change_proof_state pstate = 
+    if Proof_model.change_current_proof_state pstate then begin
+        Options.action (fun vagt -> 
+            let sid = !Proof_model.current_session_id in
+            if sid <> "" then Vmdv_client.change_proof_state vagt sid pstate
+            ) !vagent
+        (* ;
+        print_endline ("changed the state of the proof of "^(!current_session_id)^" to "^(str_proof_state pstate)) *)
+    end
+
+let add_new_goals cmd goals =     
+    let fg_goals = goals.fg_goals in
+    let chosen_node = select_chosen_node () in
+    (match chosen_node with
+    | None -> print_endline "No focus node, maybe the proof tree is complete"
+    | Some cnode -> 
+        let new_nodes : node list = List.map (fun g -> 
+        {
+            id = g.goal_id;
+            label = Coqv_utils.goal_to_label g;
+            state = To_be_chosen;
+            parent = cnode;
+            stateid = (*!Doc_model.current_stateid*)-1;
+        }) fg_goals in
+        if List.length new_nodes = 0 then begin
+            (* print_endline "No more goals."; *)
+            if cmd = ["Admit"] then
+                on_change_node_state cnode.id Admitted
+            else
+                on_change_node_state cnode.id Proved;
+            add_tactic cnode.id (Doc_model.uncommitted_command ());
+            let tactic = get_tactic cnode.id in
+            on_change_tactic cnode.id tactic
+        end else begin
+            begin match cmd with
+            (* | Focus _ ->
+                on_change_node_state cnode.id To_be_chosen;
+                add_tactic cnode.id (Doc_model.uncommitted_command ()) *)
+            | ["Admit"] -> 
+                on_change_node_state cnode.id Admitted;
+                add_tactic cnode.id (Doc_model.uncommitted_command ())
+            | _ -> 
+                let has_new = List.fold_left (fun b (n:node) -> 
+                if b then 
+                    b 
+                else
+                    not (node_exists n.id) 
+                ) false new_nodes in
+                if (not has_new) && (not (List.mem cnode.id (List.map (fun (n:node) -> n.id) new_nodes))) then begin
+                    on_change_node_state cnode.id Proved;
+                    add_tactic cnode.id (Doc_model.uncommitted_command ());
+                    let tactic = get_tactic cnode.id in
+                    on_change_tactic cnode.id tactic
+                end
+            (* | _ -> () *)
+            end;
+            List.iter (fun (n:node) ->
+                if node_exists n.id then
+                    on_change_node_state (n.id) To_be_chosen
+                else begin
+                    on_add_node cnode n To_be_chosen;
+                    on_change_node_state cnode.id Not_proved
+                end         
+            ) (List.tl new_nodes);
+            let new_focused_node = List.hd new_nodes in
+            if node_exists new_focused_node.id then begin
+                on_change_node_state new_focused_node.id Chosen;
+                print_endline "Current Goal:\n";
+                print_endline (Status.str_node new_focused_node.id);
+            end else begin
+                on_add_node cnode new_focused_node Chosen;
+                on_change_node_state cnode.id Not_proved;
+                print_endline "Current Goal:\n";
+                print_endline (Status.str_node new_focused_node.id);
+            end
+        end)               
+
+let handle_proof cmd goals = 
+    match cmd with
+    | ["Proof"] -> ()
+    | ["Qed"] -> 
+        on_change_proof_state Defined;
+        current_session_id := ""
+    | ["Admitted"] -> 
+        (* print_endline "current proof tree is admitted"; *)
+        on_change_proof_state Declared;
+        current_session_id := ""
+    | "Abort" :: _ -> 
+        (* print_endline "current proof tree is aborted"; *)
+        on_change_proof_state Aborted;
+        current_session_id := ""
+    | "Undo" :: _ | "Restart" :: _ | ["Editat"] -> 
+        let fg_goals = goals.fg_goals in
+        let nids = List.map (fun g -> g.goal_id) fg_goals in
+        let removed_ids = ref [] in
+        List.iter (fun nid -> removed_ids := (snd (children (nid) (current_proof_tree ()))) @ !removed_ids) nids;
+        (* print_endline ("Preparing to remove "^(string_of_int (List.length !removed_ids))^" nodes"); *)
+        List.iter (fun nid -> on_remove_node nid) !removed_ids;
+        if nids <> [] then begin
+            on_change_node_state (List.hd nids) Chosen;
+            List.iter (fun nid -> on_change_node_state nid To_be_chosen) (List.tl nids)
+        end
+    | "Focus" :: _ | "Unfocus" :: _ -> 
+        let fg_goals = goals.fg_goals in
+        let nids = List.map (fun g -> g.goal_id) fg_goals in begin
+        (* leaf_nids := nids; *)
+        match select_chosen_node () with
+        | None -> print_endline ("No focused node right now")
+        | Some cnode -> 
+            if nids <> [] then begin
+                on_change_node_state cnode.id To_be_chosen;
+                on_change_node_state (List.hd nids) Chosen;
+                List.iter (fun nid -> on_change_node_state nid To_be_chosen) (List.tl nids)
+            end
+        end
+    | _ -> 
+        print_string "Unimplemented proof handling command: "; 
+        List.iter (fun c -> print_string (c^" ")) cmd; 
+        print_endline ""
+    
+
+let on_receive_goals cmd_type goals = 
+    (*printf "focused goals number: %d. \n" (List.length (goals.fg_goals));*)
+    leaf_nids := List.map (fun g -> g.goal_id) goals.fg_goals;
+    begin
+        match cmd_type with
+        | Module modul_name -> moduls := (create_module modul_name) :: !moduls
+        | End modul_name -> closing_modul modul_name
+        | Proposition (thm_name, kind) -> 
+            assert(List.length (goals.fg_goals) <> 0);
+            let goal = List.hd (goals.fg_goals) in
+            let label = goal_to_label goal in
+            let rec node : node = {
+                id = goal.goal_id;
+                label = label;
+                state = Chosen;
+                parent = node;
+                stateid = !Doc_model.current_stateid;
+            } in
+            let proof_tree = new_proof_tree node in
+            let session = new_session thm_name kind Proving proof_tree in
+            on_new_session session;
+            print_endline "Current Goal:\n";
+            print_endline (Status.str_node goal.goal_id);
+            (* ;
+            print_endline ("created new session "^thm_name) *)
+        | ProofHandling cmd -> handle_proof cmd goals
+        | Tactic cmd -> add_new_goals cmd goals
+        | Require -> ()
+        | Other cmd -> 
+            print_endline ("Unknown type of command: "^(str_cmd_type cmd_type))
+    end
+            
+let on_finishing_proof cmd_type = 
+    match cmd_type with
+    | ProofHandling ["Qed"] -> 
+        on_change_proof_state Defined;
+        current_session_id := ""
+        (* History.record_step !Doc_model.current_stateid Dummy *)
+    | ProofHandling ["Admitted"] ->
+        (* let chosen_node = select_chosen_node () in
+        begin match chosen_node with
+        | None -> ()
+        | Some cnode -> Callbacks.on_change_node_state cnode.id Admitted
+        end; *)
+        print_endline "current proof tree is admitted";
+        on_change_proof_state Declared;
+        current_session_id := ""
+    | cmd -> () 
+        (* print_endline ("Don't know what to do when receiving \"Good None\" in respose_goals with cmd type: "^(str_cmd_type cmd)) *)
+
+
+
+let on_edit_at stateid = 
+    Doc_model.current_stateid := stateid;
+    Doc_model.reset_process_stateid ();
+    Doc_model.discard_uncommitted ();
+    Options.action (fun vagt -> 
+        let sid = !Proof_model.current_session_id in
+        let prooftree = Proof_model.current_proof_tree () in
+        let nid = ref "" in
+        Hashtbl.iter (fun tmp_nid node -> if node.stateid = stateid then nid := tmp_nid) prooftree.nodes;
+        if !nid <> "" && sid <> "" then 
+            remove_subproof vagt sid !nid
+        ) !vagent;
+    print_endline ("now edit at stateid "^(string_of_int stateid))
+    (* Doc_model.move_focus_to stateid;
+    Doc_model.current_stateid := stateid;
+    History.undo_upto stateid *)
+(******************************************end callbacks********************************************************************)
+
+
+
+
 let batch_commands = ref []
-
-
 
 type request_mode = 
       Request_add of (Stateid.t * string)    
@@ -71,7 +369,8 @@ and request_goals () =
     Xml_printer.print (Xml_printer.TChannel cout) xml_goals;
     log_coqtop true (Xml_printer.to_string xml_goals)
 
-and response_goals msg =
+and response_goals msg goal_callbacks =
+    let on_receive_goals, on_finishing_proof = goal_callbacks in 
     begin
     match msg with
     | Good None -> 
@@ -83,7 +382,7 @@ and response_goals msg =
         Doc_model.commit ()
     | Fail (id,loc, msg) -> 
         print_endline "fail to get goals";
-        printf "Fail at stateid %d: %s\n" id (richpp_to_string msg);
+        printf "Fail at stateid %d: %s\n" id (Coqv_utils.richpp_to_string msg);
         flush stdout;
         request_edit_at (Doc_model.latest_committed_stateid ())
     end;
@@ -122,7 +421,7 @@ and response_add msg old_stateid cmd =
             flush stdout
         | Fail (stateid, _, xml_content) -> 
             printf "error add in state id %d, message content: " stateid;
-            print_xml stdout xml_content;
+            Coqv_utils.print_xml stdout xml_content;
             print_endline "";
             flush stdout
     end;
@@ -361,7 +660,7 @@ let other_xml_str xml_str tag =
     let other_str = String.trim (String.sub xml_str prefix_length (String.length xml_str - prefix_length)) in
     other_str
 
-let handle_answer received_str = 
+let handle_answer received_str goal_callbacks = 
     (* let fb_str = Str.global_replace (ignored_re ()) "" received_str in *)
     let fb_str = received_str in
     (* print_endline fb_str; *)
@@ -389,7 +688,7 @@ let handle_answer received_str =
                     | Request_edit_at stateid -> response_edit_at (Xmlprotocol.to_answer (Xmlprotocol.edit_at 0) xml_str) stateid
                     | Request_query ->      response_query (Xmlprotocol.to_answer (Xmlprotocol.query ("", 0)) xml_str)
                     | Request_goals ->      
-                        response_goals (Xmlprotocol.to_answer (Xmlprotocol.goals ()) xml_str)
+                        response_goals (Xmlprotocol.to_answer (Xmlprotocol.goals ()) xml_str) goal_callbacks
                     | Request_evars ->      response_evars (Xmlprotocol.to_answer (Xmlprotocol.evars ()) xml_str)
                     | Request_hints ->      response_hints (Xmlprotocol.to_answer (Xmlprotocol.hints ()) xml_str)
                     | Request_status ->     response_status (Xmlprotocol.to_answer (Xmlprotocol.status true) xml_str)
@@ -413,3 +712,61 @@ let handle_answer received_str =
     while !to_be_handled <> "" do
         to_be_handled := handle !to_be_handled
     done
+
+let read_write_condition = Condition.create ()
+let read_write_mutex = Mutex.create ()
+
+let worker (cin, goal_callbacks) =     
+    let buffer = Bytes.create !Flags.xml_bufsize in
+    while !Runtime.running do
+        (* print_endline "wait for coqtop"; *)
+        let len = input cin buffer 0 !Flags.xml_bufsize in
+        (* print_endline ("coqtop responsed with length "^(string_of_int len)); *)
+        if len = 0 then
+            running := false
+        else begin
+            let output_str = Bytes.sub_string buffer 0 len in
+            (*printf "%s" (Str.global_replace (ignored_re ()) "" output_str);
+            flush stdout*)
+            if(len <> 0) then
+                handle_answer output_str goal_callbacks;
+            flush stdout
+        end;
+        (* print_endline ("there are "^(string_of_int (List.length !batch_commands))^" commands wait to send to coqtop"); *)
+        if Doc_model.is_processed () && !Doc_model.goal_responsed then begin
+            (* print_endline ("coqtop processed "); *)
+            match !pending_task with
+            | Focus nid -> 
+                let pos = Lists.find_pos nid !leaf_nids in
+                if pos >= 0 then begin
+                    let cmd_str = "Focus "^(string_of_int (pos+1))^"." in
+                    handle_input cmd_str;
+                    pending_task := No_task
+                end else begin
+                    handle_input "Unfocus.";
+                    pending_task := TryedFocus nid
+                end
+            | TryedFocus nid -> 
+                let pos = Lists.find_pos nid !leaf_nids in
+                if pos >= 0 then begin
+                    let cmd_str = "Focus "^(string_of_int (pos+1))^"." in
+                    handle_input cmd_str
+                end else begin
+                    print_endline ("Cannot chose node "^nid)
+                end;
+                pending_task := No_task
+            | No_task ->
+                if !Flags.batch_mode = false || (!batch_commands = []) then begin
+                    Flags.batch_mode := false;
+                    Flags.running_coqv := true;
+                    Condition.signal read_write_condition
+                end else begin
+                    let bch, bct = List.hd !batch_commands, List.tl !batch_commands in
+                    handle_input bch;
+                    batch_commands := bct
+                end
+        end
+    done;
+    print_endline "worker quit"
+
+

@@ -1,5 +1,8 @@
+open Types
+open Vmdv_protocol
+open Runtime
 
-let wait_to_send vagent msg = 
+let wait_to_send (vagent:visualize_agent) msg = 
     Mutex.lock vagent.sending_mutex;
     Queue.push msg vagent.sending_queue;
     Condition.signal vagent.sending_conditional;
@@ -44,31 +47,6 @@ let sending vagent =
     end;
     print_endline "vmdv message sending thread exit"
 
-let parse vagent msg = 
-    match msg with
-    | Highlight_node (sid, nid) -> 
-        printf "Highlight node %s in session %s\n" nid sid;
-        flush stdout;
-        feedback_ok vagent sid
-    | Unhighlight_node (sid, nid) ->
-        printf "Unhighlight node %s in session %s\n" nid sid;
-        flush stdout;
-        feedback_ok vagent sid
-    | Remove_subproof (sid, nid) ->
-        let node = Proof_model.get_node nid in
-        let new_stateid = node.stateid in
-        if new_stateid <> -1 then
-            Interaction.request_edit_at new_stateid
-    | Feedback_ok sid ->
-        printf "Feedback OK received from %s\n" sid;
-        flush stdout
-    | Feedback_fail (sid, error_msg) ->
-        printf "Feedback Fail received from %s: %s\n" sid error_msg;
-        flush stdout
-    | Clear_color sid -> ()
-    | _ -> 
-        printf "Not supposed to recieve this message: \n%s\n" (Yojson.Basic.to_string (json_of_msg msg));
-        flush stdout
 
 let receiving parameter =
     let vagent, parse_func = parameter in
@@ -80,7 +58,7 @@ let receiving parameter =
         let json_msg = Yojson.Basic.from_string raw_str in
         log_if_possible ("Received: "^(Yojson.Basic.to_string json_msg)^"\n");
         let msg = msg_of_json json_msg in
-        parse vagent msg
+        parse_func vagent msg
     done with _ -> ()
     end;
     print_endline "vmdv message receiving thread exit"

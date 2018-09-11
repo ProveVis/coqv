@@ -37,7 +37,7 @@ type debug_info = {
 let logs: (debug_info option) ref = ref None
 
 let log_if_possible str = 
-    match !Runtime.logs with
+    match !logs with
     | None -> ()
     | Some logs -> output_string logs.coqtop_log str; flush logs.coqtop_log
 
