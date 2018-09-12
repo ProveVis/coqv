@@ -55,6 +55,7 @@ let rec loop args =
         add_coqv_cmd "quit" ("","Quit the system") coqv_quit;
         add_coqv_cmd "export" ("<fname>", "Export the coq script into a file") coqv_export;
         add_coqv_cmd "import" ("<fname>", "Import coq script from a file") coqv_import;
+        add_coqv_cmd "help" ("","Show the usage of coqv commands") coqv_help;
 
 
         while !running do

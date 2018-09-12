@@ -60,7 +60,41 @@ let coqv_visualize options =
         close_current_visualize_agent ();
         (* Communicate.vagent := None; *)
         print_endline "now close the connect to vmdv"
-    | _ -> print_endline "invalid command" 
+    | sid -> 
+        begin match Proof_model.find_session [sid] with 
+        | None -> printf "cannot find the proof of %s\n" sid
+        | Some sesion -> 
+            Options.action (fun vagt -> 
+                Vmdv_client.create_session vagt sesion;
+                printf "created session %s, which is %s\n" sid sesion.name;
+                let prooftree = sesion.proof_tree in
+                let nodeq = Queue.create () in
+                Queue.push prooftree.root.id nodeq;
+                Vmdv_client.add_node vagt sid prooftree.root;
+                Thread.delay (2.0);
+                let tactics,cnids = Hashtbl.find prooftree.edges prooftree.root.id in
+                Vmdv_client.set_proof_rule vagt sid prooftree.root.id (Status.str_tactics tactics);
+                while not (Queue.is_empty nodeq) do
+                    let pnid = Queue.pop nodeq in
+                    if Hashtbl.mem prooftree.edges pnid then begin
+                        let tactics, cnids = (Hashtbl.find prooftree.edges pnid) in
+                        List.iter (fun cnid -> 
+                            let cnode = Hashtbl.find prooftree.nodes cnid in
+                            Vmdv_client.add_node vagt sid cnode;
+                            (* printf "adding node %s\n" cnid; *)
+                            Vmdv_client.add_edge vagt sid pnid cnid (Status.str_tactics tactics);
+                            (* printf "adding edge %s-->%s\n" pnid cnid; *)
+                            let tactics = fst (Hashtbl.find prooftree.edges cnid) in
+                            Vmdv_client.set_proof_rule vagt sid cnid (Status.str_tactics tactics);
+                            Queue.push cnid nodeq
+                        ) cnids
+                    end else 
+                        printf "node %s has no successors\n" pnid
+                done
+            ) !vagent;
+            
+        end
+        (* print_endline "invalid command"  *)
 
 let coqv_show options = 
     match (List.hd options) with
@@ -200,7 +234,7 @@ let coqv_import options =
 
 let coqv_help options = 
     Hashtbl.iter (fun cmd ((para, usage), _) -> 
-        printf "%s %s: %s\n" cmd para usage
+        printf "%s %s:\t\t\t\t%s\n" cmd para usage
     ) customized_funcs 
 (* 
     match options with
