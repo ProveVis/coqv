@@ -472,28 +472,39 @@ Hint Constructors HdRel.
 
 Theorem insert_sorted_stays_sorted : forall n l, Sorted leb l -> Sorted leb (insert_sorted n l).
 Proof.
-  (*intros n l H_sorted_l.*)
   induction l as [|n' l'].
   simpl.
   auto.
   simpl.
   auto.
   intros H_sorted_l.
-  (*induction l as [|n' l']; 
-simpl; auto.*)
-  Case "l = n' :: l'".
-    destruct (n <=? n') eqn:H_n_le_n'; auto.
-    SCase "n <=? n' = false".
+destruct (n <=? n') eqn:H_n_le_n'.
+apply Sorted_cons.
+assumption.
+apply HdRel_cons.
+assumption.
       apply Sorted_inv in H_sorted_l.
       inversion H_sorted_l as [H_sorted_l' HdRel_n'_l'].
 
       apply Sorted_cons.
-      SSCase "Sorted (insert_sorted n l')". apply IHl'. auto.
-      SSCase "HdRel n' (insert_sorted n l')".
+      apply IHl'. 
+    assumption.
         apply IHl' in H_sorted_l'.
-        destruct l'; simpl; auto.
-        destruct (n <=? n0); auto.
-        inversion HdRel_n'_l'. 
-        auto.
-Qed.
 
+destruct l'.
+simpl.
+apply HdRel_cons.
+apply flip_not_leb.
+assumption.
+simpl.
+
+destruct (n <=? n0).
+apply HdRel_cons.
+apply flip_not_leb.
+assumption.
+apply HdRel_cons.
+
+apply HdRel_inv in HdRel_n'_l'.
+assumption.
+
+(*Qed.*)
