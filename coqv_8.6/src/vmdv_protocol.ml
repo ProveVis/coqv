@@ -95,6 +95,13 @@ let json_of_msg (msg:message) =
             ("session_id", `String sid);
             ("node_id", `String nid)
         ]
+    | Expand_cut (sid, nid, cutname) ->
+        `Assoc [
+            ("type", `String "expand_cut");
+            ("session_id", `String sid);
+            ("node_id", `String nid);
+            ("cut_name", `String cutname)
+        ]
     | Feedback_ok sid ->
         `Assoc [
             ("type", `String "feedback");
@@ -133,6 +140,8 @@ let msg_of_json json =
                             (* Clear_color (get_string_of_json (get_json_of_key "session_id" str_json_list)) *)
                         | "remove_subproof" ->
                             Remove_subproof (str_value_of_json "session_id" json, str_value_of_json "node_id" json)
+                        | "expand_cut" ->
+                            Expand_cut (str_value_of_json "session_id" json, str_value_of_json "node_id" json, str_value_of_json "cut_name" json)
                         | "feedback" -> 
                             let status = str_value_of_json "status" json in
                             if status = "OK" then

@@ -21,6 +21,42 @@ let parse_vmsv_msg vagent msg =
         let new_stateid = node.stateid in
         if new_stateid <> -1 then
             Coq_client.request_edit_at new_stateid
+    | Expand_cut (sid, nid, cutname) ->
+        begin match Proof_model.find_session [cutname] with
+        | None -> Printf.printf "cannot find the proof of %s\n" cutname
+        | Some sesion ->
+            Options.action (fun vagt -> 
+                (* Vmdv_client.create_session vagt sesion; *)
+                (* printf "created session %s, which is %s\n" sid sesion.name; *)
+                let prooftree = sesion.proof_tree in
+                let nodeq = Queue.create () in
+                Queue.push prooftree.root.id nodeq;
+                Vmdv_client.add_node vagt sid prooftree.root;
+                let current_prooftree = Proof_model.current_proof_tree () in
+                let tactics = fst (Hashtbl.find current_prooftree.edges nid) in
+                Vmdv_client.add_edge vagt sid nid prooftree.root.id (Status.str_tactics tactics);
+                Thread.delay (2.0);
+                let tactics,cnids = Hashtbl.find prooftree.edges prooftree.root.id in
+                Vmdv_client.set_proof_rule vagt sid prooftree.root.id (Status.str_tactics tactics);
+                while not (Queue.is_empty nodeq) do
+                    let pnid = Queue.pop nodeq in
+                    if Hashtbl.mem prooftree.edges pnid then begin
+                        let tactics, cnids = (Hashtbl.find prooftree.edges pnid) in
+                        List.iter (fun cnid -> 
+                            let cnode = Hashtbl.find prooftree.nodes cnid in
+                            Vmdv_client.add_node vagt sid cnode;
+                            (* printf "adding node %s\n" cnid; *)
+                            Vmdv_client.add_edge vagt sid pnid cnid (Status.str_tactics tactics);
+                            (* printf "adding edge %s-->%s\n" pnid cnid; *)
+                            let tactics = fst (Hashtbl.find prooftree.edges cnid) in
+                            Vmdv_client.set_proof_rule vagt sid cnid (Status.str_tactics tactics);
+                            Queue.push cnid nodeq
+                        ) cnids
+                    end else 
+                        printf "node %s has no successors\n" pnid
+                done
+            ) !Runtime.vagent
+        end
     | Feedback_ok sid ->
         printf "Feedback OK received from %s\n" sid;
         flush stdout

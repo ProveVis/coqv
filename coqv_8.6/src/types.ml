@@ -95,6 +95,7 @@ type message =
     | Clear_color of string
     | Set_proof_rule of string * string * string
     | Remove_subproof of string * string (*Remove_subproof (sid, nid)*) 
+    | Expand_cut of string * string * string
     | Feedback_ok of string
     | Feedback_fail of string * string
 
