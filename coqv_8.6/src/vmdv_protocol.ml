@@ -20,43 +20,62 @@ let json_of_msg (msg:message) =
             ("type", `String "remove_session");
             ("session_id", `String sid)
         ]
-    | Add_node (sid, node) ->
+    | Add_node (sid, prefix, node) ->
         `Assoc [
             ("type", `String "add_node");
             ("session_id", `String sid);
             ("node", `Assoc [
-                ("id", `String node.id);
+                ("id", `String (prefix^"+"^node.id));
                 ("label", `String (str_label node.label));
                 ("state", `String (str_node_state node.state));
                 ("state_id", `String (string_of_int node.stateid))
             ])
         ]
+    (* | Add_node_cut (sid, node, cutname) ->
+        `Assoc [
+            ("type", `String "add_node");
+            ("session_id", `String sid);
+            ("node", `Assoc [
+                ("id", `String (cutname^"+"^node.id));
+                ("label", `String (str_label node.label));
+                ("state", `String (str_node_state node.state));
+                ("state_id", `String (string_of_int node.stateid))
+            ])
+        ] *)
     | Remove_node (sid, nid) ->
         `Assoc [
             ("type", `String "remove_node");
             ("session_id", `String sid);
-            ("node_id", `String nid)
+            ("node_id", `String (sid^"+"^nid))
         ]
     | Add_edge (sid, from_id, to_id, label) ->
         `Assoc [
             ("type", `String "add_edge");
             ("session_id", `String sid);
-            ("from_id", `String from_id);
-            ("to_id", `String to_id);
+            ("from_id", `String (from_id));
+            ("to_id", `String (to_id));
             ("label", `String label)
         ]
+    (* | Add_edge_cut (sid, from_id, to_id, label, cutname) ->
+        `Assoc [
+            ("type", `String "add_edge");
+            ("session_id", `String sid);
+            ("from_id", `String (cutname^"+"^from_id));
+            ("to_id", `String (cutname^"+"^to_id));
+            ("label", `String label)
+        ] *)
     | Remove_edge (sid, from_id, to_id) ->
         `Assoc [
             ("type", `String "remove_edge");
             ("session_id", `String sid);
-            ("from_id", `String from_id);
-            ("to_id", `String to_id)
+            ("from_id", `String (sid^"+"^from_id));
+            ("to_id", `String (sid^"+"^to_id))
         ]
     | Change_node_state (sid, nid, new_state) ->
         `Assoc [
             ("type", `String "change_node_state");
             ("session_id", `String sid);
-            ("node_id", `String nid);
+            ("node_id", `String (sid^"+"^nid));
             ("new_state", `String (str_node_state new_state))
         ]
     | Change_proof_state (sid, pstate) ->
@@ -69,13 +88,13 @@ let json_of_msg (msg:message) =
         `Assoc [
             ("type", `String "highlight_node");
             ("session_id", `String sid);
-            ("node_id", `String nid)
+            ("node_id", `String (sid^"+"^nid))
         ]
     | Unhighlight_node (sid, nid) ->
         `Assoc [
             ("type", `String "unhighlight_node");
             ("session_id", `String sid);
-            ("node_id", `String nid)
+            ("node_id", `String (sid^"+"^nid))
         ]
     | Clear_color sid ->
         `Assoc [
@@ -86,20 +105,27 @@ let json_of_msg (msg:message) =
         `Assoc [
             ("type", `String "set_proof_rule");
             ("session_id", `String sid);
-            ("node_id", `String nid);
+            ("node_id", `String (nid));
             ("rule", `String rule)
         ]
+    (* | Set_proof_rule_cut (sid, nid, rule, cutname) ->
+        `Assoc [
+            ("type", `String "set_proof_rule");
+            ("session_id", `String sid);
+            ("node_id", `String (cutname^"+"^nid));
+            ("rule", `String rule)
+        ] *)
     | Remove_subproof (sid, nid) ->
         `Assoc [
             ("type", `String "remove_subproof");
             ("session_id", `String sid);
-            ("node_id", `String nid)
+            ("node_id", `String (sid^"+"^nid))
         ]
     | Expand_cut (sid, nid, cutname) ->
         `Assoc [
             ("type", `String "expand_cut");
             ("session_id", `String sid);
-            ("node_id", `String nid);
+            ("node_id", `String (sid^"+"^nid));
             ("cut_name", `String cutname)
         ]
     | Feedback_ok sid ->

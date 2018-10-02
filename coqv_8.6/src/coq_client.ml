@@ -28,7 +28,7 @@ let on_new_session (session: session) =
         | None -> (*print_endline "no vmdv agent currently"*)()
         | Some vagt -> 
             Vmdv_client.create_session vagt session;
-            Vmdv_client.add_node vagt session.name node
+            Vmdv_client.add_node vagt session.name session.name node
     end
 
 let rec change_one_node_state (node:node) state = 
@@ -75,7 +75,7 @@ let on_change_node_label (node:node) new_label tactic =
 let on_change_tactic nid tactic = 
     Options.action (fun vagt -> 
         let sid = !Proof_model.current_session_id in
-        if sid <> "" then set_proof_rule vagt sid nid tactic
+        if sid <> "" then set_proof_rule vagt sid (sid^"+"^nid) tactic
         ) !vagent
 
 let on_add_node node_from node_to state = 
@@ -91,8 +91,8 @@ let on_add_node node_from node_to state =
         | Some vagt ->
             let sid = !Proof_model.current_session_id in
             if sid <> "" then begin
-                Vmdv_client.add_node vagt sid node_to;
-                Vmdv_client.add_edge vagt sid node_from.id node_to.id label    
+                Vmdv_client.add_node vagt sid sid node_to;
+                Vmdv_client.add_edge vagt sid (sid^"+"^node_from.id) (sid^"+"^node_to.id) label    
             end
     end
 

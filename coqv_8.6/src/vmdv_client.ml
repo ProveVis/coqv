@@ -10,9 +10,11 @@ let wait_to_send (vagent:visualize_agent) msg =
 
 let create_session vagent (session: session) = wait_to_send vagent (Create_session (session.name, (str_proof_kind session.kind) ^" "^session.name, "Tree", node_state_list))
 let remove_session vagent sid = wait_to_send vagent (Remove_session sid)
-let add_node vagent sid node = wait_to_send vagent (Add_node (sid, node))
+let add_node vagent sid prefix node = wait_to_send vagent (Add_node (sid, prefix, node))
+(* let add_node_cut cutname vagent sid node = wait_to_send vagent (Add_node_cut (sid, node, cutname)) *)
 let remove_node vagent sid nid = wait_to_send vagent (Remove_node (sid, nid))
 let add_edge vagent sid from_id to_id label = wait_to_send vagent (Add_edge (sid, from_id, to_id, label))
+(* let add_edge_cut cutname vagent sid from_id to_id label = wait_to_send vagent (Add_edge_cut (sid, from_id, to_id, label, cutname)) *)
 let remove_edge vagent sid from_id to_id = wait_to_send vagent (Remove_edge (sid, from_id, to_id))
 let change_node_state vagent sid nid state = wait_to_send vagent (Change_node_state (sid, nid, state))
 let change_proof_state vagent sid pstate = wait_to_send vagent (Change_proof_state (sid, pstate))
@@ -20,6 +22,7 @@ let highlight_node vagent sid nid = wait_to_send vagent (Highlight_node (sid, ni
 let unhighlight_node vagent sid nid = wait_to_send vagent (Unhighlight_node (sid, nid))
 let clear_color vagent sid = wait_to_send vagent (Clear_color sid)
 let set_proof_rule vagent sid nid rule = wait_to_send vagent (Set_proof_rule (sid, nid, rule))
+(* let set_proof_rule_cut cutname vagent sid nid rule = wait_to_send vagent (Set_proof_rule_cut (sid, nid, rule, cutname)) *)
 let remove_subproof vagent sid nid = wait_to_send vagent (Remove_subproof (sid, nid))
 let feedback_ok vagent sid = wait_to_send vagent (Feedback_ok sid)
 let feedback_fail vagent sid error_msg = wait_to_send vagent (Feedback_fail (sid, error_msg))
@@ -49,6 +52,7 @@ let sending vagent =
 
 
 let receiving parameter =
+    Printexc.record_backtrace true;
     let vagent, parse_func = parameter in
     let cin = vagent.input in 
     begin try while vagent.is_alive do
@@ -59,7 +63,9 @@ let receiving parameter =
         log_if_possible ("Received: "^(Yojson.Basic.to_string json_msg)^"\n");
         let msg = msg_of_json json_msg in
         parse_func vagent msg
-    done with _ -> ()
+    done with e -> 
+        print_endline ("Exception: "^(Printexc.to_string e));
+        Printexc.print_backtrace stdout
     end;
     print_endline "vmdv message receiving thread exit"
 

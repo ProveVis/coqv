@@ -84,9 +84,11 @@ type modul = {
 type message = 
     | Create_session of string * string * string * (node_state list)
     | Remove_session of string
-    | Add_node of string * node
+    | Add_node of string * string (*prefix*) * node
+    (* | Add_node_cut of string * node * string *)
     | Remove_node of string * string
     | Add_edge of string * string * string * string
+    (* | Add_edge_cut of string * string * string * string * string *)
     | Remove_edge of string * string * string
     | Change_node_state of string * string * node_state
     | Change_proof_state of string * proof_state
@@ -94,6 +96,7 @@ type message =
     | Unhighlight_node of string * string
     | Clear_color of string
     | Set_proof_rule of string * string * string
+    (* | Set_proof_rule_cut of string * string * string * string *)
     | Remove_subproof of string * string (*Remove_subproof (sid, nid)*) 
     | Expand_cut of string * string * string
     | Feedback_ok of string
