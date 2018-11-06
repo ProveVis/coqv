@@ -109,39 +109,31 @@ Proof.
   simpl.
   auto.
   intros H_sorted_l.
-
-destruct (n <=? n') eqn:H_n_le_n'.
-
-apply Sorted_cons.
-assumption.
-
-apply HdRel_cons.
-apply le_leb.
-assumption.
-      apply Sorted_inv in H_sorted_l.
-      inversion H_sorted_l as [H_sorted_l' HdRel_n'_l'].
-
-      apply Sorted_cons.
- apply IHl'. 
-    assumption.
-    apply IHl' in H_sorted_l'.
-
-destruct l'.
-simpl.
-apply HdRel_cons.
-apply le_leb.
-
-apply flip_not_leb.
-assumption.
-simpl.
-
-destruct (n <=? n0).
-apply HdRel_cons.
-apply le_leb.
-apply flip_not_leb.
-assumption.
-apply HdRel_cons.
-
-apply HdRel_inv in HdRel_n'_l'.
-assumption.
+  destruct (n <=? n') eqn:H_n_le_n'.
+  apply Sorted_cons.
+  assumption.
+  apply HdRel_cons.
+  apply le_leb.
+  assumption.
+  apply Sorted_inv in H_sorted_l.
+  inversion H_sorted_l as [H_sorted_l' HdRel_n'_l'].
+  apply Sorted_cons.
+  apply IHl'. 
+  assumption.
+  apply IHl' in H_sorted_l'.
+  destruct l'.
+  simpl.
+  apply HdRel_cons.
+  apply le_leb.
+  apply flip_not_leb.
+  assumption.
+  simpl.
+  destruct (n <=? n0).
+  apply HdRel_cons.
+  apply le_leb.
+  apply flip_not_leb.
+  assumption.
+  apply HdRel_cons.
+  apply HdRel_inv in HdRel_n'_l'.
+  assumption.
 (* Qed. *)

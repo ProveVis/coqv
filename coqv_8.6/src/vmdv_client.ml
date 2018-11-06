@@ -55,18 +55,19 @@ let receiving parameter =
     Printexc.record_backtrace true;
     let vagent, parse_func = parameter in
     let cin = vagent.input in 
-    begin try while vagent.is_alive do
-        let buffer = Bytes.create !Flags.json_bufsize in
-        let len = input cin buffer 0 !Flags.json_bufsize in
-        let raw_str = Bytes.sub_string buffer 0 len in
-        let json_msg = Yojson.Basic.from_string raw_str in
-        log_if_possible ("Received: "^(Yojson.Basic.to_string json_msg)^"\n");
-        let msg = msg_of_json json_msg in
-        parse_func vagent msg
-    done with e -> 
-        print_endline ("Exception: "^(Printexc.to_string e));
-        Printexc.print_backtrace stdout
-    end;
+    while vagent.is_alive do
+        try 
+            let buffer = Bytes.create !Flags.json_bufsize in
+            let len = input cin buffer 0 !Flags.json_bufsize in
+            let raw_str = Bytes.sub_string buffer 0 len in
+            let json_msg = Yojson.Basic.from_string raw_str in
+            log_if_possible ("Received: "^(Yojson.Basic.to_string json_msg)^"\n");
+            let msg = msg_of_json json_msg in
+            parse_func vagent msg
+        with e -> ()
+            (* print_endline ("Exception: "^(Printexc.to_string e));
+            Printexc.print_backtrace stdout *)
+    done;
     print_endline "vmdv message receiving thread exit"
 
 (* let start_send_receive vagent =

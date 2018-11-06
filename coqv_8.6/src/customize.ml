@@ -17,6 +17,8 @@ let parse_vmsv_msg vagent msg =
         flush stdout;
         feedback_ok vagent sid
     | Remove_subproof (sid, nid) ->
+        printf "removing subproof from node %s\n" nid;
+        let nid = List.nth (String.split_on_char '+' nid) 1 in
         let node = Proof_model.get_node nid in
         let new_stateid = node.stateid in
         if new_stateid <> -1 then
@@ -105,7 +107,7 @@ let coqv_visualize options =
         | Some sesion -> 
             Options.action (fun vagt -> 
                 Vmdv_client.create_session vagt sesion;
-                printf "created session %s, which is %s\n" sid sesion.name;
+                printf "created session %s\n" sid;
                 let prooftree = sesion.proof_tree in
                 let nodeq = Queue.create () in
                 Queue.push prooftree.root.id nodeq;
@@ -139,7 +141,7 @@ let coqv_visualize options =
         | Some sesion -> 
             Options.action (fun vagt -> 
                 Vmdv_client.create_session vagt sesion;
-                printf "created session %s, which is %s\n" sid sesion.name;
+                printf "created session %s\n" sid;
                 let prooftree = sesion.proof_tree in
                 let nodeq = Queue.create () in
                 Queue.push prooftree.root.id nodeq;
@@ -303,6 +305,11 @@ let coqv_import options =
                 flush stdout
             end
     end
+
+let coqv_goal options = 
+    match select_chosen_node () with
+    | None -> print_endline "No Goal."
+    | Some g -> print_endline (str_label g.label)
 
 
 let coqv_help options = 
