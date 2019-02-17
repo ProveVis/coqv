@@ -26,7 +26,7 @@ let json_of_msg (msg:message) =
             ("session_id", `String sid);
             ("node", `Assoc [
                 ("id", `String (prefix^"+"^node.id));
-                ("label", `String (str_label node.label));
+                ("label", `String (html_label node.label));
                 ("state", `String (str_node_state node.state));
                 ("state_id", `String (string_of_int node.stateid))
             ])
