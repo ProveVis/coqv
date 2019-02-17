@@ -41,6 +41,54 @@ let str_label label =
     str_buf := !str_buf ^ "==========================\n"^label.conclusion;
     !str_buf
 
+let escaped_str str = 
+    let buffer = Bytes.create 1024 in
+    let length = ref 0 in
+    let add_str_to_buffer str = 
+        String.iter (fun c -> Bytes.fill buffer !length 1 c; incr length) str in
+    let eacape_char c = 
+        match c with
+        | '&' -> Some "&amp;"
+        | '<' -> Some "&lt;"
+        | '>' -> Some "&gt;"
+        | '"' -> Some "&quot;"
+        | '\'' -> Some "&apos;"
+        | ' ' -> Some "&nbsp;";
+        | _ -> None in
+    String.iter (fun c -> 
+        match eacape_char c with
+        | Some str -> add_str_to_buffer str
+        | None -> Bytes.fill buffer !length 1 c; incr length) str;
+    let escapted_str = Bytes.sub_string buffer 0 !length in 
+    (*printf "raw str: %s, escaped str: %s\n" str escapted_str;
+    flush stdout;*)
+    escapted_str
+
+let caught_str str = 
+    str |>
+    Str.global_replace (Str.regexp "&nbsp;") " " |>
+    Str.global_replace (Str.regexp "&apos;") "'" |>
+    Str.global_replace (Str.regexp "&quot;") "\"" |>
+    Str.global_replace (Str.regexp "&amp;") "&" |>
+    Str.global_replace (Str.regexp "&gt;") ">" |>
+    Str.global_replace (Str.regexp "&lt;") "<" |>
+    Str.global_replace (Str.regexp "  ") " " |>
+    Str.global_replace (Str.regexp "( ") "(" |>
+    Str.global_replace (Str.regexp " )") ")" |>
+    Str.global_replace (Str.regexp " , ") ", " |>
+    Str.global_replace (Str.regexp " : ") ": "
+
+let html_label label = 
+    let str_buf = ref "" in
+    List.iter (fun (hn, hc) -> 
+        (* let added_str = ref "" in
+        let splitted = String.split_on_char ':' hn in
+        let name = List.hd (splitted) in
+        added_str := "<b>"^name^"</b> : "^(String.sub hn (String.index hn ':') (String.length hn - (String.length name) - 1))^"<br>";
+        str_buf := !str_buf ^ added_str *)
+    str_buf := !str_buf ^ "<b>"^ (escaped_str hn) ^ "</b> : " ^ (escaped_str hc)^"<br>") label.hypos;
+    str_buf := !str_buf ^ "<b>==========================</b><br>"^(escaped_str label.conclusion);
+    !str_buf
 type node = {
     id: string;
     mutable label: label;
